@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Copy, Eye, Trash2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const apiKeys = [
   {
@@ -23,6 +25,39 @@ const apiKeys = [
 ];
 
 const APIKeys = () => {
+  const [keys, setKeys] = useState(apiKeys);
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
+
+  const handleCopyKey = async (key: string, name: string) => {
+    try {
+      await navigator.clipboard.writeText(key);
+      toast.success(`${name} copied to clipboard!`);
+    } catch (err) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const handleToggleReveal = (key: string) => {
+    setRevealedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const handleCreateKey = () => {
+    toast.info("Create API key dialog would open here");
+  };
+
+  const handleDeleteKey = (name: string) => {
+    setKeys(keys.filter(key => key.name !== name));
+    toast.success(`${name} deleted successfully!`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -30,7 +65,7 @@ const APIKeys = () => {
           <h1 className="text-3xl font-bold mb-2">API Keys</h1>
           <p className="text-muted-foreground">Manage your API keys for authentication</p>
         </div>
-        <Button>
+        <Button onClick={handleCreateKey}>
           <Plus className="w-4 h-4 mr-2" />
           Create API Key
         </Button>
@@ -53,18 +88,28 @@ const APIKeys = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {apiKeys.map((apiKey) => (
+              {keys.map((apiKey) => (
                 <TableRow key={apiKey.key}>
                   <TableCell className="font-medium">{apiKey.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                        {apiKey.key}
+                        {revealedKeys.has(apiKey.key) ? apiKey.key : apiKey.key}
                       </code>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => handleToggleReveal(apiKey.key)}
+                      >
                         <Eye className="w-3 h-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => handleCopyKey(apiKey.key, apiKey.name)}
+                      >
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
@@ -81,7 +126,12 @@ const APIKeys = () => {
                   <TableCell className="text-muted-foreground">{apiKey.created}</TableCell>
                   <TableCell className="text-muted-foreground">{apiKey.lastUsed}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteKey(apiKey.name)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>

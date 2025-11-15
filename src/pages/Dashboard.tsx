@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DollarSign, Receipt, Wallet, TrendingUp, ExternalLink, Copy } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const revenueData = [
   { date: "Jan 8", revenue: 42000 },
@@ -45,6 +46,19 @@ const getStatusColor = (status: string) => {
 };
 
 const Dashboard = () => {
+  const handleCopyTransactionId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      toast.success("Transaction ID copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const handleViewTransaction = (id: string) => {
+    toast.info(`Viewing transaction: ${id}`);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -162,7 +176,12 @@ const Dashboard = () => {
                   <TableCell className="font-mono text-sm">
                     <div className="flex items-center gap-2">
                       {transaction.id}
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => handleCopyTransactionId(transaction.id)}
+                      >
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
@@ -176,7 +195,12 @@ const Dashboard = () => {
                   <TableCell>{transaction.customer}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.date}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleViewTransaction(transaction.id)}
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   </TableCell>

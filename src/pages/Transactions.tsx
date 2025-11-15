@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Filter, Upload, ExternalLink, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 const transactions = [
   { id: "cos-lbD1sphpgl0Bj", status: "succeeded", amount: "$1,250.00 USD", customer: "john.doe@example.com", date: "2024-01-15 14:32" },
@@ -33,6 +34,23 @@ const getStatusColor = (status: string) => {
 };
 
 const Transactions = () => {
+  const handleCopyTransactionId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      toast.success("Transaction ID copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const handleViewTransaction = (id: string) => {
+    toast.info(`Viewing transaction: ${id}`);
+  };
+
+  const handleExport = () => {
+    toast.success("Exporting transactions...");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -40,7 +58,7 @@ const Transactions = () => {
           <h1 className="text-3xl font-bold mb-2">Transactions</h1>
           <p className="text-muted-foreground">View and manage all payment transactions</p>
         </div>
-        <Button>
+        <Button onClick={handleExport}>
           <Upload className="w-4 h-4 mr-2" />
           Export
         </Button>
@@ -90,7 +108,12 @@ const Transactions = () => {
                   <TableCell className="font-mono text-sm">
                     <div className="flex items-center gap-2">
                       {transaction.id}
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => handleCopyTransactionId(transaction.id)}
+                      >
                         <Copy className="w-3 h-3" />
                       </Button>
                     </div>
@@ -104,7 +127,12 @@ const Transactions = () => {
                   <TableCell>{transaction.customer}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.date}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleViewTransaction(transaction.id)}
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   </TableCell>

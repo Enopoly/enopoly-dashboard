@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Copy, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const webhookEndpoints = [
   {
@@ -32,6 +34,35 @@ const getStatusColor = (status: string) => {
 };
 
 const Webhooks = () => {
+  const [webhookSecret] = useState("whsec_1234567890abcdefghijklmnopqrstuv");
+  const [endpoints, setEndpoints] = useState(webhookEndpoints);
+
+  const handleCopySecret = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookSecret);
+      toast.success("Webhook secret copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const handleRegenerateSecret = () => {
+    toast.success("Webhook secret regenerated successfully!");
+  };
+
+  const handleCreateWebhook = () => {
+    toast.info("Create webhook dialog would open here");
+  };
+
+  const handleEditWebhook = (url: string) => {
+    toast.info(`Editing webhook: ${url}`);
+  };
+
+  const handleDeleteWebhook = (url: string) => {
+    setEndpoints(endpoints.filter(endpoint => endpoint.url !== url));
+    toast.success("Webhook endpoint deleted successfully!");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -39,7 +70,7 @@ const Webhooks = () => {
           <h1 className="text-3xl font-bold mb-2">Webhooks</h1>
           <p className="text-muted-foreground">Configure webhook endpoints for real-time notifications</p>
         </div>
-        <Button>
+        <Button onClick={handleCreateWebhook}>
           <Plus className="w-4 h-4 mr-2" />
           Create Webhook
         </Button>
@@ -62,7 +93,7 @@ const Webhooks = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {webhookEndpoints.map((endpoint, index) => (
+              {endpoints.map((endpoint, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-mono text-sm">{endpoint.url}</TableCell>
                   <TableCell>
@@ -83,10 +114,20 @@ const Webhooks = () => {
                   <TableCell className="text-muted-foreground">{endpoint.lastDelivery}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleEditWebhook(endpoint.url)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteWebhook(endpoint.url)}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -102,13 +143,20 @@ const Webhooks = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Webhook Secret</CardTitle>
-            <Button variant="outline" size="sm">Regenerate</Button>
+            <Button variant="outline" size="sm" onClick={handleRegenerateSecret}>
+              Regenerate
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg font-mono text-sm">
-            <code className="flex-1">whsec_1234567890abcdefghijklmnopqrstuv</code>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <code className="flex-1">{webhookSecret}</code>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={handleCopySecret}
+            >
               <Copy className="w-4 h-4" />
             </Button>
           </div>
