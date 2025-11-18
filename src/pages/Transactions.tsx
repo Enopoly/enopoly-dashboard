@@ -30,10 +30,55 @@ const Transactions = () => {
   const handleExport = async () => {
     setIsExporting(true);
     toast.loading("Exporting transactions...");
-    await fakeApiCall(1500);
-    setIsExporting(false);
-    toast.dismiss();
-    toast.success("Transactions exported to CSV successfully!");
+    
+    await fakeApiCall(1500); // Simulate network delay
+
+    try {
+      const filteredData = filteredTransactions;
+      
+      // 1. Convert data to CSV format
+      const headers = ["ID", "Status", "Amount", "Customer", "Date"];
+      const csvRows = [
+        headers.join(','),
+        ...filteredData.map(t => [
+          `"${t.id}"`,
+          `"${t.status}"`,
+          `"${t.amount}"`,
+          `"${t.customer}"`,
+          `"${t.date}"`
+        ].join(','))
+      ];
+      const csvString = csvRows.join('\n');
+
+      // 2. Create a Blob
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+
+      // 3. Create a temporary URL
+      const url = URL.createObjectURL(blob);
+
+      // 4. Create a temporary anchor element
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "transactions.csv");
+
+      // 5. Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // 6. Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.dismiss();
+      toast.success("Transactions exported to CSV successfully!");
+
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to export transactions.");
+      console.error("Export error:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const filteredTransactions = transactions.filter(transaction => {
