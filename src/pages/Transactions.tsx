@@ -1,55 +1,46 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Upload, ExternalLink, Copy } from "lucide-react";
+import { Search, Filter, Upload, ExternalLink, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-const transactions = [
-  { id: "cos-lbD1sphpgl0Bj", status: "succeeded", amount: "$1,250.00 USD", customer: "john.doe@example.com", date: "2024-01-15 14:32" },
-  { id: "cos-2cD2tlhpn201k", status: "processing", amount: "$850.50 USD", customer: "jane.smith@example.com", date: "2024-01-15 13:18" },
-  { id: "cos-3dD3ujir1302l", status: "failed", amount: "$2,100.00 USD", customer: "bob.wilson@example.com", date: "2024-01-15 12:05" },
-  { id: "cos-6bBavk4js4D3e", status: "succeeded", amount: "$525.00 USD", customer: "alice.brown@example.com", date: "2024-01-15 11:22" },
-  { id: "cos-5fD5wlkt6506n", status: "refunded", amount: "$1,750.00 USD", customer: "charlie.davis@example.com", date: "2024-01-15 10:45" },
-  { id: "cos-6gD6xme7u605o", status: "expired", amount: "$399.99 USD", customer: "david.miller@example.com", date: "2024-01-15 09:30" },
-];
+import { useData } from "@/contexts/DataContext";
+import { useState } from "react";
+import { fakeApiCall } from "@/lib/api";
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "succeeded":
-      return "bg-success/10 text-success hover:bg-success/20";
-    case "processing":
-      return "bg-info/10 text-info hover:bg-info/20";
-    case "failed":
-      return "bg-destructive/10 text-destructive hover:bg-destructive/20";
-    case "refunded":
-      return "bg-warning/10 text-warning hover:bg-warning/20";
-    case "expired":
-      return "bg-muted text-muted-foreground hover:bg-muted/80";
-    default:
-      return "bg-muted text-muted-foreground";
+    case "succeeded": return "bg-success/10 text-success hover:bg-success/20";
+    case "processing": return "bg-info/10 text-info hover:bg-info/20";
+    case "failed": return "bg-destructive/10 text-destructive hover:bg-destructive/20";
+    case "refunded": return "bg-warning/10 text-warning hover:bg-warning/20";
+    case "expired": return "bg-muted text-muted-foreground hover:bg-muted/80";
+    default: return "bg-muted text-muted-foreground";
   }
 };
 
 const Transactions = () => {
-  const handleCopyTransactionId = async (id: string) => {
-    try {
-      await navigator.clipboard.writeText(id);
-      toast.success("Transaction ID copied to clipboard!");
-    } catch (err) {
-      toast.error("Failed to copy to clipboard");
-    }
+  const { transactions } = useData();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.loading("Exporting transactions...");
+    await fakeApiCall(1500);
+    setIsExporting(false);
+    toast.dismiss();
+    toast.success("Transactions exported to CSV successfully!");
   };
 
-  const handleViewTransaction = (id: string) => {
-    toast.info(`Viewing transaction: ${id}`);
-  };
-
-  const handleExport = () => {
-    toast.success("Exporting transactions...");
-  };
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) || transaction.customer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || transaction.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -58,8 +49,8 @@ const Transactions = () => {
           <h1 className="text-3xl font-bold mb-2">Transactions</h1>
           <p className="text-muted-foreground">View and manage all payment transactions</p>
         </div>
-        <Button onClick={handleExport}>
-          <Upload className="w-4 h-4 mr-2" />
+        <Button onClick={handleExport} disabled={isExporting}>
+          {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
           Export
         </Button>
       </div>
@@ -69,16 +60,10 @@ const Transactions = () => {
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search by ID, customer, or reference..." 
-                className="pl-10"
-              />
+              <Input placeholder="Search by ID, customer, or reference..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="succeeded">Succeeded</SelectItem>
@@ -91,6 +76,7 @@ const Transactions = () => {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="text-sm text-muted-foreground mb-4">Showing {filteredTransactions.length} of {transactions.length} transactions</div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -103,39 +89,19 @@ const Transactions = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-mono text-sm">
                     <div className="flex items-center gap-2">
                       {transaction.id}
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6"
-                        onClick={() => handleCopyTransactionId(transaction.id)}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { navigator.clipboard.writeText(transaction.id); toast.success("Copied!"); }}><Copy className="w-3 h-3" /></Button>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(transaction.status)} variant="secondary">
-                      {transaction.status}
-                    </Badge>
-                  </TableCell>
+                  <TableCell><Badge className={getStatusColor(transaction.status)} variant="secondary">{transaction.status}</Badge></TableCell>
                   <TableCell className="font-semibold">{transaction.amount}</TableCell>
                   <TableCell>{transaction.customer}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.date}</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => handleViewTransaction(transaction.id)}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
+                  <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Viewing ${transaction.id}`)}><ExternalLink className="w-4 h-4" /></Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
