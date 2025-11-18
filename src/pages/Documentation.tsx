@@ -7,7 +7,7 @@ const Documentation = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Documentation</h1>
-        <p className="text-muted-foreground">Learn how to integrate WaveFlow into your application</p>
+        <p className="text-muted-foreground">Learn how to integrate Enopoly Automation into your application</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

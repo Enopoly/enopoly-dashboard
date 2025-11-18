@@ -5,8 +5,7 @@ import {
   Wallet, 
   Key, 
   Webhook, 
-  FileText,
-  Waves
+  FileText
 } from "lucide-react";
 
 const navItems = [
@@ -22,14 +21,13 @@ export const Sidebar = () => {
   return (
     <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Waves className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-sidebar-foreground">WaveFlow</h1>
-            <p className="text-xs text-sidebar-foreground/60">Payment Platform</p>
-          </div>
+        <div className="flex flex-col items-center gap-2">
+          <img 
+            src="/sidebar_logo.png" 
+            alt="Enopoly Automation" 
+            className="h-auto w-full max-w-[180px]"
+          />
+          <p className="text-xs text-sidebar-foreground/60 text-center">E-commerce Automation</p>
         </div>
       </div>
       
