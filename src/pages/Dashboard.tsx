@@ -18,10 +18,10 @@ const revenueData = [
 ];
 
 const recentActivity = [
-  { id: 1, event: "Payment received from john.doe@example.com", status: "succeeded", time: "2 min ago" },
+  { id: 1, event: "Payment received from john.doe@gmail.com", status: "succeeded", time: "2 min ago" },
   { id: 2, event: "Payout sent to merchant-456", status: "processing", time: "5 min ago" },
-  { id: 3, event: "Payment failed for bob.wilson@example.com", status: "failed", time: "12 min ago" },
-  { id: 4, event: "Refund processed for alice.brown@example.com", status: "refunded", time: "28 min ago" },
+  { id: 3, event: "Payment failed for bob.wilson@gmail.com", status: "failed", time: "12 min ago" },
+  { id: 4, event: "Refund processed for alice.brown@gmail.com", status: "refunded", time: "28 min ago" },
 ];
 
 const getStatusColor = (status: string) => {

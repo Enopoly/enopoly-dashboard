@@ -31,10 +31,10 @@ export interface WebhookEndpoint {
 }
 
 const customers = [
-  "john.doe@example.com", "jane.smith@example.com", "bob.wilson@example.com",
-  "alice.brown@example.com", "charlie.davis@example.com", "david.miller@example.com",
-  "emma.johnson@example.com", "frank.martinez@example.com", "grace.garcia@example.com",
-  "henry.rodriguez@example.com", "isabel.hernandez@example.com", "jack.lopez@example.com"
+  "john.doe@gmail.com", "jane.smith@gmail.com", "bob.wilson@gmail.com",
+  "alice.brown@gmail.com", "charlie.davis@gmail.com", "david.miller@gmail.com",
+  "emma.johnson@gmail.com", "frank.martinez@gmail.com", "grace.garcia@gmail.com",
+  "henry.rodriguez@gmail.com", "isabel.hernandez@gmail.com", "jack.lopez@gmail.com"
 ];
 
 const statuses: Transaction['status'][] = ['succeeded', 'processing', 'failed', 'refunded', 'expired'];
