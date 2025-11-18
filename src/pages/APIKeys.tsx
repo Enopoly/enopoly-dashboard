@@ -1,32 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Copy, Eye, Trash2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Copy, Eye, EyeOff, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
-
-const apiKeys = [
-  {
-    name: "Production API Key",
-    key: "wave_prod_sk...cdef",
-    scopes: ["checkout", "payout", "webhooks"],
-    created: "2024-01-01",
-    lastUsed: "2024-01-15 14:32",
-  },
-  {
-    name: "Development API Key",
-    key: "wave_dev_sk...dcba",
-    scopes: ["checkout"],
-    created: "2023-12-15",
-    lastUsed: "2024-01-14 09:15",
-  },
-];
+import { useData } from "@/contexts/DataContext";
+import { fakeApiCall, generateApiKey } from "@/lib/api";
 
 const APIKeys = () => {
-  const [keys, setKeys] = useState(apiKeys);
+  const { apiKeys, addApiKey, deleteApiKey } = useData();
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyScopes, setNewKeyScopes] = useState<string[]>(["checkout"]);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
 
   const handleCopyKey = async (key: string, name: string) => {
     try {
@@ -49,13 +43,64 @@ const APIKeys = () => {
     });
   };
 
-  const handleCreateKey = () => {
-    toast.info("Create API key dialog would open here");
+  const handleCreateKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error("Please enter a key name");
+      return;
+    }
+
+    setIsCreating(true);
+    toast.loading("Generating API key...");
+    
+    await fakeApiCall(1500);
+    
+    const newKey = generateApiKey();
+    const newApiKey = {
+      name: newKeyName,
+      key: newKey,
+      scopes: newKeyScopes,
+      created: new Date().toISOString().split('T')[0],
+      lastUsed: "Never"
+    };
+    
+    addApiKey(newApiKey);
+    setGeneratedKey(newKey);
+    
+    setIsCreating(false);
+    toast.dismiss();
+    toast.success("API Key created successfully!");
   };
 
-  const handleDeleteKey = (name: string) => {
-    setKeys(keys.filter(key => key.name !== name));
-    toast.success(`${name} deleted successfully!`);
+  const handleDeleteKey = async (name: string) => {
+    setIsDeleting(name);
+    toast.loading("Revoking API key...");
+    
+    await fakeApiCall(1000);
+    
+    deleteApiKey(name);
+    
+    setIsDeleting(null);
+    toast.dismiss();
+    toast.error(`${name} revoked successfully!`);
+  };
+
+  const toggleScope = (scope: string) => {
+    setNewKeyScopes(prev => 
+      prev.includes(scope) 
+        ? prev.filter(s => s !== scope)
+        : [...prev, scope]
+    );
+  };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setNewKeyName("");
+    setNewKeyScopes(["checkout"]);
+    setGeneratedKey(null);
+  };
+
+  const maskKey = (key: string) => {
+    return key.slice(0, 15) + "..." + key.slice(-4);
   };
 
   return (
@@ -65,10 +110,89 @@ const APIKeys = () => {
           <h1 className="text-3xl font-bold mb-2">API Keys</h1>
           <p className="text-muted-foreground">Manage your API keys for authentication</p>
         </div>
-        <Button onClick={handleCreateKey}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create API Key
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Create API Key
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {generatedKey ? "API Key Created" : "Create New API Key"}
+              </DialogTitle>
+              <DialogDescription>
+                {generatedKey 
+                  ? "Save this API key now. You won't be able to see it again!"
+                  : "Generate a new API key for your application"
+                }
+              </DialogDescription>
+            </DialogHeader>
+            
+            {generatedKey ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <code className="text-sm font-mono break-all">{generatedKey}</code>
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={() => handleCopyKey(generatedKey, "API Key")}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Key
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="key-name">Key Name</Label>
+                  <Input
+                    id="key-name"
+                    placeholder="Production API Key"
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    disabled={isCreating}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Scopes</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["checkout", "payout", "webhooks", "refunds"].map(scope => (
+                      <Badge
+                        key={scope}
+                        variant={newKeyScopes.includes(scope) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleScope(scope)}
+                      >
+                        {scope}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              {generatedKey ? (
+                <Button onClick={closeDialog} className="w-full">
+                  Done
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={closeDialog} disabled={isCreating}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateKey} disabled={isCreating}>
+                    {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Generate Key
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -88,13 +212,13 @@ const APIKeys = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {keys.map((apiKey) => (
+              {apiKeys.map((apiKey) => (
                 <TableRow key={apiKey.key}>
                   <TableCell className="font-medium">{apiKey.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                        {revealedKeys.has(apiKey.key) ? apiKey.key : apiKey.key}
+                        {revealedKeys.has(apiKey.key) ? apiKey.key : maskKey(apiKey.key)}
                       </code>
                       <Button 
                         variant="ghost" 
@@ -102,7 +226,11 @@ const APIKeys = () => {
                         className="h-7 w-7"
                         onClick={() => handleToggleReveal(apiKey.key)}
                       >
-                        <Eye className="w-3 h-3" />
+                        {revealedKeys.has(apiKey.key) ? (
+                          <EyeOff className="w-3 h-3" />
+                        ) : (
+                          <Eye className="w-3 h-3" />
+                        )}
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -131,8 +259,13 @@ const APIKeys = () => {
                       size="icon" 
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => handleDeleteKey(apiKey.name)}
+                      disabled={isDeleting === apiKey.name}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {isDeleting === apiKey.name ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
                     </Button>
                   </TableCell>
                 </TableRow>
