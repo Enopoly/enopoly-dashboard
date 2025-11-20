@@ -55,24 +55,24 @@ const Dashboard = () => {
   const successRate = ((succeededTransactions.length / transactions.length) * 100).toFixed(1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your payments today.</p>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Welcome back! Here's what's happening with your payments today.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="TOTAL REVENUE" value={`$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+20.1% from last month" icon={DollarSign} />
         <StatCard title="TRANSACTIONS" value={transactions.length.toString()} change="+180 today" icon={Activity} />
         <StatCard title="PAYOUTS" value="$48,574" change="+12 this week" icon={TrendingUp} />
         <StatCard title="SUCCESS RATE" value={`${successRate}%`} change="+2.5% from last week" icon={CheckCircle} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Revenue Overview</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
@@ -91,10 +91,10 @@ const Dashboard = () => {
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="border-b border-border last:border-0 pb-3 last:pb-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm">{activity.event}</p>
+                    <p className="text-xs sm:text-sm">{activity.event}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Badge className={getStatusColor(activity.status)} variant="secondary">{activity.status}</Badge>
+                  <div className="flex items-center justify-between mt-2">
+                    <Badge className={`${getStatusColor(activity.status)} text-xs`} variant="secondary">{activity.status}</Badge>
                     <span className="text-xs text-muted-foreground">{activity.time}</span>
                   </div>
                 </div>
@@ -107,18 +107,18 @@ const Dashboard = () => {
       <Card>
         <CardHeader><CardTitle>Recent Transactions</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {transactions.slice(0, 5).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm font-mono font-semibold">{transaction.id}</code>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyTransactionId(transaction.id)}><Copy className="w-3 h-3" /></Button>
-                    <Badge className={getStatusColor(transaction.status)} variant="secondary">{transaction.status}</Badge>
+              <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 md:p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="text-xs sm:text-sm font-mono font-semibold truncate">{transaction.id}</code>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleCopyTransactionId(transaction.id)}><Copy className="w-3 h-3" /></Button>
+                    <Badge className={`${getStatusColor(transaction.status)} text-xs`} variant="secondary">{transaction.status}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{transaction.customer} • {transaction.date}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{transaction.customer} • {transaction.date}</p>
                 </div>
-                <p className="text-lg font-bold">{transaction.amount}</p>
+                <p className="text-base sm:text-lg font-bold sm:text-right">{transaction.amount}</p>
               </div>
             ))}
           </div>

@@ -104,15 +104,15 @@ const APIKeys = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">API Keys</h1>
-          <p className="text-muted-foreground">Manage your API keys for authentication</p>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">API Keys</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your API keys for authentication</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Create API Key
             </Button>
@@ -200,78 +200,85 @@ const APIKeys = () => {
           <CardTitle>Your API Keys</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Key</TableHead>
-                <TableHead>Scopes</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last Used</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {apiKeys.map((apiKey) => (
-                <TableRow key={apiKey.key}>
-                  <TableCell className="font-medium">{apiKey.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                        {revealedKeys.has(apiKey.key) ? apiKey.key : maskKey(apiKey.key)}
-                      </code>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[120px]">Name</TableHead>
+                  <TableHead className="min-w-[200px]">Key</TableHead>
+                  <TableHead>Scopes</TableHead>
+                  <TableHead className="hidden md:table-cell">Created</TableHead>
+                  <TableHead className="hidden lg:table-cell">Last Used</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {apiKeys.map((apiKey) => (
+                  <TableRow key={apiKey.key}>
+                    <TableCell className="font-medium">{apiKey.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <code className="text-xs sm:text-sm font-mono bg-muted px-2 py-1 rounded break-all">
+                          {revealedKeys.has(apiKey.key) ? apiKey.key : maskKey(apiKey.key)}
+                        </code>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => handleToggleReveal(apiKey.key)}
+                          >
+                            {revealedKeys.has(apiKey.key) ? (
+                              <EyeOff className="w-3 h-3" />
+                            ) : (
+                              <Eye className="w-3 h-3" />
+                            )}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => handleCopyKey(apiKey.key, apiKey.name)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="md:hidden text-xs text-muted-foreground mt-1">
+                        Created: {apiKey.created} • Last Used: {apiKey.lastUsed}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {apiKey.scopes.map((scope) => (
+                          <Badge key={scope} variant="secondary" className="text-xs">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{apiKey.created}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">{apiKey.lastUsed}</TableCell>
+                    <TableCell className="text-right">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-7 w-7"
-                        onClick={() => handleToggleReveal(apiKey.key)}
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteKey(apiKey.name)}
+                        disabled={isDeleting === apiKey.name}
                       >
-                        {revealedKeys.has(apiKey.key) ? (
-                          <EyeOff className="w-3 h-3" />
+                        {isDeleting === apiKey.name ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <Eye className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                         )}
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7"
-                        onClick={() => handleCopyKey(apiKey.key, apiKey.name)}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {apiKey.scopes.map((scope) => (
-                        <Badge key={scope} variant="secondary" className="text-xs">
-                          {scope}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{apiKey.created}</TableCell>
-                  <TableCell className="text-muted-foreground">{apiKey.lastUsed}</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteKey(apiKey.name)}
-                      disabled={isDeleting === apiKey.name}
-                    >
-                      {isDeleting === apiKey.name ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

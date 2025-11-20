@@ -88,13 +88,13 @@ const Transactions = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Transactions</h1>
-          <p className="text-muted-foreground">View and manage all payment transactions</p>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Transactions</h1>
+          <p className="text-sm md:text-base text-muted-foreground">View and manage all payment transactions</p>
         </div>
-        <Button onClick={handleExport} disabled={isExporting}>
+        <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
           {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
           Export
         </Button>
@@ -102,13 +102,13 @@ const Transactions = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search by ID, customer, or reference..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[180px]"><Filter className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="succeeded">Succeeded</SelectItem>
@@ -122,35 +122,38 @@ const Transactions = () => {
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground mb-4">Showing {filteredTransactions.length} of {transactions.length} transactions</div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="font-mono text-sm">
-                    <div className="flex items-center gap-2">
-                      {transaction.id}
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { navigator.clipboard.writeText(transaction.id); toast.success("Copied!"); }}><Copy className="w-3 h-3" /></Button>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge className={getStatusColor(transaction.status)} variant="secondary">{transaction.status}</Badge></TableCell>
-                  <TableCell className="font-semibold">{transaction.amount}</TableCell>
-                  <TableCell>{transaction.customer}</TableCell>
-                  <TableCell className="text-muted-foreground">{transaction.date}</TableCell>
-                  <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Viewing ${transaction.id}`)}><ExternalLink className="w-4 h-4" /></Button></TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">Transaction ID</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredTransactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-mono text-xs sm:text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate max-w-[120px] sm:max-w-none">{transaction.id}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(transaction.id); toast.success("Copied!"); }}><Copy className="w-3 h-3" /></Button>
+                      </div>
+                      <div className="sm:hidden text-xs text-muted-foreground mt-1">{transaction.customer} • {transaction.date}</div>
+                    </TableCell>
+                    <TableCell><Badge className={getStatusColor(transaction.status)} variant="secondary" className="text-xs">{transaction.status}</Badge></TableCell>
+                    <TableCell className="font-semibold">{transaction.amount}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{transaction.customer}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{transaction.date}</TableCell>
+                    <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Viewing ${transaction.id}`)}><ExternalLink className="w-4 h-4" /></Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
