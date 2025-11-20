@@ -4,8 +4,7 @@ import {
   Receipt, 
   Wallet, 
   Key, 
-  Webhook, 
-  FileText
+  Webhook
 } from "lucide-react";
 
 const navItems = [
@@ -14,7 +13,6 @@ const navItems = [
   { title: "Payouts", url: "/payouts", icon: Wallet },
   { title: "API Keys", url: "/api-keys", icon: Key },
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
-  { title: "Documentation", url: "/documentation", icon: FileText },
 ];
 
 export const Sidebar = () => {
