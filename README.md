@@ -65,7 +65,31 @@ src/
 └── lib/           # Utility functions and API
 ```
 
+## Documentation
+
+This project includes comprehensive documentation for adding Stripe payment processing, invoice management, and customer portal features.
+
+📋 **All documentation is in the [`docs/`](./docs/) folder:**
+
+### Essential Documents
+
+- [`docs/PROJECT_SUMMARY.md`](./docs/PROJECT_SUMMARY.md) - Quick overview of the project
+- [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md) - Detailed implementation plan
+- [`docs/TIMELINE.md`](./docs/TIMELINE.md) - Realistic project timeline (12-15 days)
+- [`docs/CLIENT_CHECKLIST.md`](./docs/CLIENT_CHECKLIST.md) - Required information from client
+
+### Reference Documents
+
+- [`docs/TECH_STACK.md`](./docs/TECH_STACK.md) - Complete technology stack details
+- [`docs/QUICK_START.md`](./docs/QUICK_START.md) - Setup checklist and commands
+- [`docs/PDF_STORAGE_STRATEGY.md`](./docs/PDF_STORAGE_STRATEGY.md) - PDF storage approach
+
+## Next Steps
+
+1. Review the implementation plan documents above
+2. Get Stripe API keys from client
+3. Follow the day-by-day plan to implement backend API and features
+
 ## License
 
 Private project
-

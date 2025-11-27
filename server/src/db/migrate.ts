@@ -16,11 +16,14 @@ export function runMigrations(): void {
     const schema = fs.readFileSync(schemaPath, "utf-8");
     logger.info("Running database migrations...");
 
-    // Split schema by semicolons and execute each statement
+    // Remove comments and split by semicolons
     const statements = schema
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n")
       .split(";")
       .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith("--"));
+      .filter((s) => s.length > 0);
 
     db.exec("BEGIN TRANSACTION;");
 
