@@ -1,46 +1,120 @@
 import { Router } from "express";
 import { logger } from "../utils/logger";
+import { InvoiceService } from "../services/invoice";
+import { PdfService } from "../services/pdf";
+import { AppError, HttpStatus } from "../utils/errors";
 
 const router = Router();
 
-// Placeholder routes - will be implemented in Day 5
-
-router.get("/", (_req, res) => {
-  logger.info("GET /api/invoices - Not implemented yet");
-  res.json({
-    success: true,
-    data: [],
-    message: "Invoice endpoints coming soon",
-  });
+// GET /api/invoices - List all invoices
+router.get("/", (_req, res, next) => {
+  try {
+    const invoices = InvoiceService.getAllInvoices();
+    res.json({
+      success: true,
+      data: invoices,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get("/:id", (req, res) => {
-  logger.info(`GET /api/invoices/${req.params.id} - Not implemented yet`);
-  res.json({
-    success: true,
-    data: null,
-    message: "Invoice detail endpoint coming soon",
-  });
+// GET /api/invoices/:id - Get invoice details
+router.get("/:id", (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
+    }
+
+    const invoice = InvoiceService.getInvoiceById(id);
+    res.json({
+      success: true,
+      data: invoice,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/", (_req, res) => {
-  logger.info("POST /api/invoices - Not implemented yet");
-  res.json({
-    success: true,
-    data: null,
-    message: "Create invoice endpoint coming soon",
-  });
+// GET /api/invoices/:id/pdf - Download invoice PDF
+router.get("/:id/pdf", (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
+    }
+
+    const invoice = InvoiceService.getInvoiceById(id);
+    const doc = PdfService.generateInvoicePDF(invoice);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${invoice.invoice_number}.pdf`
+    );
+
+    doc.pipe(res);
+    doc.end();
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.put("/:id", (req, res) => {
-  logger.info(`PUT /api/invoices/${req.params.id} - Not implemented yet`);
-  // Use req for params
-  res.json({
-    success: true,
-    data: null,
-    message: "Update invoice endpoint coming soon",
-  });
+// POST /api/invoices - Create new invoice
+router.post("/", (req, res, next) => {
+  try {
+    const { customer_email, customer_name, amount, description, currency } = req.body;
+
+    if (!customer_email || !customer_name || !amount) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields");
+    }
+
+    const invoice = InvoiceService.createInvoice({
+      customer_email,
+      customer_name,
+      amount: parseFloat(amount),
+      description,
+      currency,
+    });
+
+    logger.info(`Created invoice ${invoice.invoice_number} for ${customer_email}`);
+
+    res.status(201).json({
+      success: true,
+      data: invoice,
+      message: "Invoice created successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/invoices/:id - Update invoice status (placeholder for now)
+router.put("/:id", (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { status } = req.body;
+
+    if (isNaN(id)) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
+    }
+
+    if (!status) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Status is required");
+    }
+
+    InvoiceService.updateStatus(id, status);
+    const updatedInvoice = InvoiceService.getInvoiceById(id);
+
+    res.json({
+      success: true,
+      data: updatedInvoice,
+      message: "Invoice updated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
-

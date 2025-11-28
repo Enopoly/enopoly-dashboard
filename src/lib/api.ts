@@ -19,3 +19,43 @@ export const generatePayoutId = (): string => {
   }
   return id;
 };
+
+const API_URL = "http://localhost:3001/api";
+
+export interface Invoice {
+  id: number;
+  invoice_number: string;
+  customer_email: string;
+  customer_name: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "paid" | "refunded" | "voided";
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const fetchInvoices = async (): Promise<Invoice[]> => {
+  const response = await fetch(`${API_URL}/invoices`);
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
+};
+
+export const createInvoice = async (invoiceData: any): Promise<Invoice> => {
+  const response = await fetch(`${API_URL}/invoices`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(invoiceData),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
+};
+
+export const getInvoice = async (id: number): Promise<Invoice> => {
+  const response = await fetch(`${API_URL}/invoices/${id}`);
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
+};

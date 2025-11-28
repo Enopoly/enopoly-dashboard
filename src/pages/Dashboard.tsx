@@ -7,23 +7,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 
-const revenueData = [
-  { name: 'Mon', revenue: 12400 },
-  { name: 'Tue', revenue: 19800 },
-  { name: 'Wed', revenue: 15600 },
-  { name: 'Thu', revenue: 22100 },
-  { name: 'Fri', revenue: 28300 },
-  { name: 'Sat', revenue: 18900 },
-  { name: 'Sun', revenue: 24500 },
-];
-
-const recentActivity = [
-  { id: 1, event: "Payment received from john.doe@gmail.com", status: "succeeded", time: "2 min ago" },
-  { id: 2, event: "Payout sent to merchant-456", status: "processing", time: "5 min ago" },
-  { id: 3, event: "Payment failed for bob.wilson@gmail.com", status: "failed", time: "12 min ago" },
-  { id: 4, event: "Refund processed for alice.brown@gmail.com", status: "refunded", time: "28 min ago" },
-];
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case "succeeded": return "bg-success/10 text-success hover:bg-success/20";
@@ -48,11 +31,35 @@ const Dashboard = () => {
 
   const succeededTransactions = transactions.filter(t => t.status === 'succeeded');
   const totalRevenue = succeededTransactions.reduce((acc, t) => {
-    const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g,""));
+    const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
     return acc + amount;
   }, 0);
-  
-  const successRate = ((succeededTransactions.length / transactions.length) * 100).toFixed(1);
+
+  const successRate = transactions.length > 0
+    ? ((succeededTransactions.length / transactions.length) * 100).toFixed(1)
+    : "0.0";
+
+  // Derive recent activity from transactions
+  const recentActivity = transactions.slice(0, 5).map((t, index) => ({
+    id: index,
+    event: `Payment ${t.status} for ${t.customer}`,
+    status: t.status,
+    time: t.date
+  }));
+
+  // Derive revenue data (last 7 days)
+  const revenueData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dateStr = d.toISOString().slice(0, 10);
+
+    const dayRevenue = succeededTransactions
+      .filter(t => t.date.startsWith(dateStr))
+      .reduce((acc, t) => acc + parseFloat(t.amount.replace(/[^0-9.-]+/g, "")), 0);
+
+    return { name: dayName, revenue: dayRevenue };
+  });
 
   return (
     <div className="space-y-4 md:space-y-6">
