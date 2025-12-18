@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { Invoice } from "./invoice";
+import fs from "fs";
 
 export class PdfService {
     /**
@@ -17,14 +18,26 @@ export class PdfService {
     }
 
     private static generateHeader(doc: PDFKit.PDFDocument) {
+        const companyName = process.env.COMPANY_NAME || "ENOPOLY";
+        const companyAddress = process.env.COMPANY_ADDRESS || "";
+        const logoPath = process.env.COMPANY_LOGO_PATH;
+
+        if (logoPath && fs.existsSync(logoPath)) {
+            doc.image(logoPath, 50, 45, { width: 50 });
+        }
+
         doc
             .fillColor("#444444")
             .fontSize(20)
-            .text("Waveflow Dashboard", 110, 57)
-            .fontSize(10)
-            .text("123 Main Street", 200, 65, { align: "right" })
-            .text("New York, NY, 10025", 200, 80, { align: "right" })
-            .moveDown();
+            .text(companyName, 110, 57);
+
+        if (companyAddress) {
+            doc
+                .fontSize(10)
+                .text(companyAddress, 200, 65, { align: "right" });
+        }
+
+        doc.moveDown();
     }
 
     private static generateCustomerInformation(doc: PDFKit.PDFDocument, invoice: Invoice) {

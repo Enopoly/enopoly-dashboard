@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Activity, TrendingUp, CheckCircle, Copy } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useData } from "@/contexts/DataContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTransactions } from "@/lib/api";
 import { toast } from "sonner";
 
 const getStatusColor = (status: string) => {
@@ -18,7 +19,11 @@ const getStatusColor = (status: string) => {
 };
 
 const Dashboard = () => {
-  const { transactions } = useData();
+  const { data: transactions = [] } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: fetchTransactions,
+    initialData: []
+  });
 
   const handleCopyTransactionId = async (id: string) => {
     try {
@@ -71,7 +76,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="TOTAL REVENUE" value={`$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+20.1% from last month" icon={DollarSign} />
         <StatCard title="TRANSACTIONS" value={transactions.length.toString()} change="+180 today" icon={Activity} />
-        <StatCard title="PAYOUTS" value="$48,574" change="+12 this week" icon={TrendingUp} />
+        <StatCard title="PAYOUTS" value="$0.00" change="Not Configured" icon={TrendingUp} />
         <StatCard title="SUCCESS RATE" value={`${successRate}%`} change="+2.5% from last week" icon={CheckCircle} />
       </div>
 

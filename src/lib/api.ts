@@ -20,7 +20,7 @@ export const generatePayoutId = (): string => {
   return id;
 };
 
-const API_URL = "http://localhost:3001/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002/api";
 
 export interface Invoice {
   id: number;
@@ -55,6 +55,13 @@ export const createInvoice = async (invoiceData: any): Promise<Invoice> => {
 
 export const getInvoice = async (id: number): Promise<Invoice> => {
   const response = await fetch(`${API_URL}/invoices/${id}`);
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
+};
+
+export const fetchTransactions = async (): Promise<any[]> => {
+  const response = await fetch(`${API_URL}/transactions`);
   const data = await response.json();
   if (!data.success) throw new Error(data.message);
   return data.data;

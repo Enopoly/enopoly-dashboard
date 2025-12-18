@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import { useState } from "react";
+import { FileText } from "lucide-react";
 
 export const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

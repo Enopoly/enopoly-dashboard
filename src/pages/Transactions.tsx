@@ -21,8 +21,14 @@ const getStatusColor = (status: string) => {
   }
 };
 
+import { useQuery } from "@tanstack/react-query";
+import { fetchTransactions } from "@/lib/api";
+
 const Transactions = () => {
-  const { transactions } = useData();
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: fetchTransactions,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
@@ -30,12 +36,12 @@ const Transactions = () => {
   const handleExport = async () => {
     setIsExporting(true);
     toast.loading("Exporting transactions...");
-    
+
     await fakeApiCall(1500); // Simulate network delay
 
     try {
       const filteredData = filteredTransactions;
-      
+
       // 1. Convert data to CSV format
       const headers = ["ID", "Status", "Amount", "Customer", "Date"];
       const csvRows = [
@@ -135,7 +141,19 @@ const Transactions = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Loading transactions...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No transactions found
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTransactions.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell className="font-mono text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
@@ -144,11 +162,11 @@ const Transactions = () => {
                       </div>
                       <div className="sm:hidden text-xs text-muted-foreground mt-1">{transaction.customer} • {transaction.date}</div>
                     </TableCell>
-                    <TableCell><Badge className={getStatusColor(transaction.status)} variant="secondary" className="text-xs">{transaction.status}</Badge></TableCell>
+                    <TableCell><Badge className={`${getStatusColor(transaction.status)} text-xs`} variant="secondary">{transaction.status}</Badge></TableCell>
                     <TableCell className="font-semibold">{transaction.amount}</TableCell>
                     <TableCell className="hidden sm:table-cell">{transaction.customer}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{transaction.date}</TableCell>
-                    <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Viewing ${transaction.id}`)}><ExternalLink className="w-4 h-4" /></Button></TableCell>
+                    <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`/invoice/${transaction.invoiceId}`, '_blank')}><ExternalLink className="w-4 h-4" /></Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -14,14 +14,20 @@ import paymentsRouter from "./routes/payments";
 import transactionsRouter from "./routes/transactions";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // CORS configuration - allow frontend origin
+// CORS configuration - allow frontend origin
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:8080",
+  origin: [
+    process.env.FRONTEND_URL || "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5173", // Common Vite port fallback
+    "http://localhost:8081",
+  ],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 // Middleware
@@ -73,10 +79,10 @@ app.use((err: Error | AppError, req: Request, res: Response, _next: NextFunction
 try {
   logger.info("Initializing database...");
   getDatabase();
-  
+
   // Run migrations
   runMigrations();
-  
+
   logger.info("Database initialization complete");
 } catch (error) {
   logger.error("Failed to initialize database", error);

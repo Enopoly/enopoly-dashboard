@@ -2,6 +2,7 @@ import { Router } from "express";
 import { logger } from "../utils/logger";
 import { InvoiceService } from "../services/invoice";
 import { PdfService } from "../services/pdf";
+import { EmailService } from "../services/email";
 import { AppError, HttpStatus } from "../utils/errors";
 
 const router = Router();
@@ -80,10 +81,23 @@ router.post("/", (req, res, next) => {
 
     logger.info(`Created invoice ${invoice.invoice_number} for ${customer_email}`);
 
+    // Generate Payment Link
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
+    const paymentLink = `${frontendUrl}/invoice/${invoice.id}`;
+
+    // Send Email (Async)
+    EmailService.sendInvoiceLink(
+      customer_email,
+      paymentLink,
+      invoice.amount,
+      customer_name,
+      invoice.invoice_number
+    );
+
     res.status(201).json({
       success: true,
-      data: invoice,
-      message: "Invoice created successfully",
+      data: { ...invoice, paymentLink }, // Return link for immediate testing
+      message: "Invoice created and sent successfully",
     });
   } catch (error) {
     next(error);
