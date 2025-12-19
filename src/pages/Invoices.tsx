@@ -89,12 +89,12 @@ const Invoices = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
                     <p className="text-muted-foreground">Manage and track your customer invoices.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 self-end md:self-auto">
                     <Button variant="outline" size="icon" onClick={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>
