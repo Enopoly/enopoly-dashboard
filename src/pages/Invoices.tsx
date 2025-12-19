@@ -171,57 +171,59 @@ const Invoices = () => {
                     <CardTitle>All Invoices</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Invoice #</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Customer</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8">Loading invoices...</TableCell>
+                                    <TableHead>Invoice #</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ) : invoices.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No invoices found. Create one to get started!</TableCell>
-                                </TableRow>
-                            ) : (
-                                invoices.map((invoice) => (
-                                    <TableRow key={invoice.id}>
-                                        <TableCell className="font-mono font-medium">{invoice.invoice_number}</TableCell>
-                                        <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <span>{invoice.customer_name}</span>
-                                                <span className="text-xs text-muted-foreground">{invoice.customer_email}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-bold">
-                                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary" className={getStatusColor(invoice.status)}>
-                                                {invoice.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>
-                                                    <ExternalLink className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8">Loading invoices...</TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : invoices.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No invoices found. Create one to get started!</TableCell>
+                                    </TableRow>
+                                ) : (
+                                    invoices.map((invoice) => (
+                                        <TableRow key={invoice.id}>
+                                            <TableCell className="font-mono font-medium whitespace-nowrap">{invoice.invoice_number}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="whitespace-nowrap">{invoice.customer_name}</span>
+                                                    <span className="text-xs text-muted-foreground whitespace-nowrap">{invoice.customer_email}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-bold whitespace-nowrap">
+                                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary" className={getStatusColor(invoice.status)}>
+                                                    {invoice.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>
+                                                        <ExternalLink className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
