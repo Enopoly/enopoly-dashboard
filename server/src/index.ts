@@ -76,34 +76,43 @@ app.use((err: Error | AppError, req: Request, res: Response, _next: NextFunction
 });
 
 // Initialize database and run migrations
-try {
-  logger.info("Initializing database...");
-  getDatabase();
+(async () => {
+  try {
+    logger.info("Initializing database...");
+    getDatabase(); // Initialize connection
 
-  // Run migrations
-  runMigrations();
+    // Run migrations
+    await runMigrations();
 
-  logger.info("Database initialization complete");
-} catch (error) {
-  logger.error("Failed to initialize database", error);
-  process.exit(1);
+    logger.info("Database initialization complete");
+  } catch (error) {
+    logger.error("Failed to initialize database", error);
+    process.exit(1);
+  }
+})();
+
+// Export app for Vercel
+export default app;
+
+// Start server if not running in Vercel (local dev or standalone)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    logger.info(`🚀 Server is running on port ${PORT}`);
+    logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  });
 }
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 Server is running on port ${PORT}`);
-  logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-});
-
 // Graceful shutdown
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM signal received: closing HTTP server");
-  process.exit(0);
-});
+if (process.env.NODE_ENV !== "production") {
+  process.on("SIGTERM", () => {
+    logger.info("SIGTERM signal received: closing HTTP server");
+    process.exit(0);
+  });
 
-process.on("SIGINT", () => {
-  logger.info("SIGINT signal received: closing HTTP server");
-  process.exit(0);
-});
+  process.on("SIGINT", () => {
+    logger.info("SIGINT signal received: closing HTTP server");
+    process.exit(0);
+  });
+}
 

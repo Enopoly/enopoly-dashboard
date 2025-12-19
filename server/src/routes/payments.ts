@@ -5,11 +5,11 @@ import { getDatabase } from "../db/connection";
 
 const router = Router();
 const paymentGateway = new AuthorizeNetService();
-const db = getDatabase();
 
 router.post("/charge", async (req, res) => {
   try {
     const { amount, cardData, invoiceId } = req.body;
+    const db = getDatabase();
 
     if (!amount || !cardData || !invoiceId) {
       return res.status(400).json({
@@ -20,21 +20,22 @@ router.post("/charge", async (req, res) => {
 
     logger.info(`Processing payment for invoice ${invoiceId}`);
 
-    // Fetch invoice to get customer email
-    const invoice = db.prepare("SELECT customer_email FROM invoices WHERE id = ?").get(invoiceId) as { customer_email: string };
+    // Fetch invoice to get customer email (Async)
+    const invoice = await db.get<{ customer_email: string }>("SELECT customer_email FROM invoices WHERE id = ?", [invoiceId]);
 
     if (invoice && invoice.customer_email) {
       cardData.email = invoice.customer_email;
     }
 
+    // Payment gateway is already async
     const result = await paymentGateway.charge(amount, cardData, invoiceId);
 
     if (result.success) {
-      // Update invoice status (simple implementation - would normally be more robust)
-      db.prepare("UPDATE invoices SET status = 'paid' WHERE id = ?").run(invoiceId);
+      // Update invoice status (Async)
+      await db.execute("UPDATE invoices SET status = 'paid' WHERE id = ?", [invoiceId]);
 
-      // Log transaction
-      db.prepare(`
+      // Log transaction (Async)
+      await db.execute(`
         INSERT INTO transactions (
           invoice_id, 
           authorizenet_transaction_id, 
@@ -45,12 +46,12 @@ router.post("/charge", async (req, res) => {
           created_at
         )
         VALUES (?, ?, ?, 'approved', 'charge', ?, datetime('now'))
-      `).run(
+      `, [
         invoiceId,
         result.transactionId || `TRANS-${Date.now()}`,
         amount,
         result.message || "Payment successful"
-      );
+      ]);
 
       logger.info(`Payment successful for invoice ${invoiceId}. Transaction ID: ${result.transactionId}`);
       return res.json({
@@ -135,4 +136,3 @@ router.post("/void/:id", async (req, res) => {
 });
 
 export default router;
-

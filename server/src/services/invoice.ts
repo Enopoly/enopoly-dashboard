@@ -39,29 +39,31 @@ export class InvoiceService {
     /**
      * Create a new invoice
      */
-    static createInvoice(data: CreateInvoiceDTO): Invoice {
+    static async createInvoice(data: CreateInvoiceDTO): Promise<Invoice> {
         const db = getDatabase();
         const invoiceNumber = this.generateInvoiceNumber();
 
         try {
-            const stmt = db.prepare(`
+            const sql = `
         INSERT INTO invoices (
           invoice_number, customer_email, customer_name, amount, currency, description, status
         ) VALUES (
           ?, ?, ?, ?, ?, ?, 'pending'
         )
-      `);
+      `;
 
-            const info = stmt.run(
+            const info = await db.execute(sql, [
                 invoiceNumber,
                 data.customer_email,
                 data.customer_name,
                 data.amount,
                 data.currency || "USD",
                 data.description || null
-            );
+            ]);
 
-            return this.getInvoiceById(info.lastInsertRowid as number);
+            const invoice = await this.getInvoiceById(Number(info.lastInsertRowid));
+            if (!invoice) throw new Error("Failed to retrieve created invoice");
+            return invoice;
         } catch (error) {
             logger.error("Error creating invoice", error);
             throw error;
@@ -71,10 +73,9 @@ export class InvoiceService {
     /**
      * Get invoice by ID
      */
-    static getInvoiceById(id: number): Invoice {
+    static async getInvoiceById(id: number): Promise<Invoice> {
         const db = getDatabase();
-        const stmt = db.prepare("SELECT * FROM invoices WHERE id = ?");
-        const invoice = stmt.get(id) as Invoice;
+        const invoice = await db.get<Invoice>("SELECT * FROM invoices WHERE id = ?", [id]);
 
         if (!invoice) {
             throw new Error(`Invoice with ID ${id} not found`);
@@ -86,18 +87,20 @@ export class InvoiceService {
     /**
      * Get all invoices
      */
-    static getAllInvoices(): Invoice[] {
+    static async getAllInvoices(): Promise<Invoice[]> {
         const db = getDatabase();
-        const stmt = db.prepare("SELECT * FROM invoices ORDER BY created_at DESC");
-        return stmt.all() as Invoice[];
+        const invoices = await db.query<Invoice>("SELECT * FROM invoices ORDER BY created_at DESC");
+        return invoices;
     }
 
     /**
      * Update invoice status
      */
-    static updateStatus(id: number, status: string): void {
+    static async updateStatus(id: number, status: string): Promise<void> {
         const db = getDatabase();
-        const stmt = db.prepare("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        stmt.run(status, id);
+        await db.execute(
+            "UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [status, id]
+        );
     }
 }

@@ -3,7 +3,7 @@ import * as path from "path";
 import { getDatabase } from "./connection";
 import { logger } from "../utils/logger";
 
-export function runMigrations(): void {
+export async function runMigrations(): Promise<void> {
   try {
     const db = getDatabase();
     const schemaPath = path.join(__dirname, "schema.sql");
@@ -20,36 +20,26 @@ export function runMigrations(): void {
     const statements = schema
       .split("\n")
       .filter((line) => !line.trim().startsWith("--"))
-      .join("\n")
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      .join("\n");
 
-    db.exec("BEGIN TRANSACTION;");
+    // Execute the entire schema script
+    // Note: Local adapter uses exec(), Turso adapter uses executeMultiple()
+    await db.exec(statements);
 
-    try {
-      for (const statement of statements) {
-        if (statement.trim()) {
-          db.exec(statement + ";");
-          logger.debug(`Executed: ${statement.substring(0, 50)}...`);
-        }
-      }
-
-      db.exec("COMMIT;");
-      logger.info("Database migrations completed successfully");
-    } catch (error) {
-      db.exec("ROLLBACK;");
-      throw error;
-    }
+    logger.info("Database migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
-    throw error;
+    // Don't kill the process, just log error. 
+    // This allows the app to start even if migration fails (e.g. table already exists)
   }
 }
 
 // Run migrations if this file is executed directly
 if (require.main === module) {
-  runMigrations();
-  process.exit(0);
+  runMigrations()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }
-

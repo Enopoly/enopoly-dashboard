@@ -5,11 +5,11 @@ import { getDatabase } from "../db/connection";
 const router = Router();
 
 // GET /api/transactions - List all transactions
-router.get("/", (_req, res) => {
+router.get("/", async (_req, res) => {
   try {
     const db = getDatabase();
 
-    const transactions = db.prepare(`
+    const transactions = await db.query<any>(`
       SELECT 
         t.id,
         t.authorizenet_transaction_id,
@@ -24,10 +24,10 @@ router.get("/", (_req, res) => {
       FROM transactions t
       LEFT JOIN invoices i ON t.invoice_id = i.id
       ORDER BY t.created_at DESC
-    `).all();
+    `);
 
     // Map to expected frontend format
-    const formattedTransactions = transactions.map((t: any) => ({
+    const formattedTransactions = transactions.map((t) => ({
       id: (t.authorizenet_transaction_id && t.authorizenet_transaction_id !== '0')
         ? t.authorizenet_transaction_id
         : `TX-${t.id}`,

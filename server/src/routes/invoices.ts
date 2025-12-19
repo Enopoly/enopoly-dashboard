@@ -8,9 +8,9 @@ import { AppError, HttpStatus } from "../utils/errors";
 const router = Router();
 
 // GET /api/invoices - List all invoices
-router.get("/", (_req, res, next) => {
+router.get("/", async (_req, res, next) => {
   try {
-    const invoices = InvoiceService.getAllInvoices();
+    const invoices = await InvoiceService.getAllInvoices();
     res.json({
       success: true,
       data: invoices,
@@ -21,14 +21,14 @@ router.get("/", (_req, res, next) => {
 });
 
 // GET /api/invoices/:id - Get invoice details
-router.get("/:id", (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
     }
 
-    const invoice = InvoiceService.getInvoiceById(id);
+    const invoice = await InvoiceService.getInvoiceById(id);
     res.json({
       success: true,
       data: invoice,
@@ -39,14 +39,15 @@ router.get("/:id", (req, res, next) => {
 });
 
 // GET /api/invoices/:id/pdf - Download invoice PDF
-router.get("/:id/pdf", (req, res, next) => {
+router.get("/:id/pdf", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
     }
 
-    const invoice = InvoiceService.getInvoiceById(id);
+    const invoice = await InvoiceService.getInvoiceById(id);
+    // PDF generation likely remains sync for now as it's CPU bound, not I/O bound
     const doc = PdfService.generateInvoicePDF(invoice);
 
     res.setHeader("Content-Type", "application/pdf");
@@ -63,7 +64,7 @@ router.get("/:id/pdf", (req, res, next) => {
 });
 
 // POST /api/invoices - Create new invoice
-router.post("/", (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
     const { customer_email, customer_name, amount, description, currency } = req.body;
 
@@ -71,7 +72,7 @@ router.post("/", (req, res, next) => {
       throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields");
     }
 
-    const invoice = InvoiceService.createInvoice({
+    const invoice = await InvoiceService.createInvoice({
       customer_email,
       customer_name,
       amount: parseFloat(amount),
@@ -85,14 +86,14 @@ router.post("/", (req, res, next) => {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
     const paymentLink = `${frontendUrl}/invoice/${invoice.id}`;
 
-    // Send Email (Async)
+    // Send Email (Async - don't await to return fast)
     EmailService.sendInvoiceLink(
       customer_email,
       paymentLink,
       invoice.amount,
       customer_name,
       invoice.invoice_number
-    );
+    ).catch(err => logger.error("Failed to send background email", err));
 
     res.status(201).json({
       success: true,
@@ -105,7 +106,7 @@ router.post("/", (req, res, next) => {
 });
 
 // PUT /api/invoices/:id - Update invoice status (placeholder for now)
-router.put("/:id", (req, res, next) => {
+router.put("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     const { status } = req.body;
@@ -118,8 +119,8 @@ router.put("/:id", (req, res, next) => {
       throw new AppError(HttpStatus.BAD_REQUEST, "Status is required");
     }
 
-    InvoiceService.updateStatus(id, status);
-    const updatedInvoice = InvoiceService.getInvoiceById(id);
+    await InvoiceService.updateStatus(id, status);
+    const updatedInvoice = await InvoiceService.getInvoiceById(id);
 
     res.json({
       success: true,
