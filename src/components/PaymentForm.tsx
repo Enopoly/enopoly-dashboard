@@ -1,32 +1,35 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Loader2, CreditCard, Lock } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+// ... inside component ...
+const response = await fetch(`${API_URL}/payments/charge`, {
+    import { useForm } from "react-hook-form";
+    import { zodResolver } from "@hookform/resolvers/zod";
+    import * as z from "zod";
+    import { Loader2, CreditCard, Lock } from "lucide-react";
 
-const paymentSchema = z.object({
-    cardNumber: z.string().min(13, "Card number must be at least 13 digits").max(19, "Card number must be at most 19 digits").regex(/^\d+$/, "Card number must contain only digits"),
-    expirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Invalid date format (MM/YY)"),
-    cvv: z.string().min(3, "CVV must be 3 or 4 digits").max(4, "CVV must be 3 or 4 digits").regex(/^\d+$/, "CVV must contain only digits"),
-    cardHolderName: z.string().min(2, "Name must be at least 2 characters"),
-    zipCode: z.string().min(5, "Zip code must be at least 5 characters").optional(),
-});
+    import { Button } from "@/components/ui/button";
+    import { Input } from "@/components/ui/input";
+    import {
+        Form,
+        FormControl,
+        FormField,
+        FormItem,
+        FormLabel,
+        FormMessage,
+    } from "@/components/ui/form";
+    import { useToast } from "@/hooks/use-toast";
 
-type PaymentFormValues = z.infer<typeof paymentSchema>;
+    const paymentSchema = z.object({
+        cardNumber: z.string().min(13, "Card number must be at least 13 digits").max(19, "Card number must be at most 19 digits").regex(/^\d+$/, "Card number must contain only digits"),
+        expirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Invalid date format (MM/YY)"),
+        cvv: z.string().min(3, "CVV must be 3 or 4 digits").max(4, "CVV must be 3 or 4 digits").regex(/^\d+$/, "CVV must contain only digits"),
+        cardHolderName: z.string().min(2, "Name must be at least 2 characters"),
+        zipCode: z.string().min(5, "Zip code must be at least 5 characters").optional(),
+    });
 
-interface PaymentFormProps {
+    type PaymentFormValues = z.infer<typeof paymentSchema>;
+
+    interface PaymentFormProps {
     invoiceId: string;
     amount: number;
     onSuccess: (transactionId: string) => void;
