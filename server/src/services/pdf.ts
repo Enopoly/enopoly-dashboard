@@ -43,7 +43,95 @@ export class PdfService {
         doc.moveDown();
     }
 
-    // ... (Customer Info is unchanged)
+    private static generateCustomerInformation(doc: PDFKit.PDFDocument, invoice: Invoice) {
+        doc
+            .fillColor("#444444")
+            .fontSize(20)
+            .text("Invoice", 50, 160);
+
+        this.generateHr(doc, 185);
+
+        const customerInformationTop = 200;
+
+        doc
+            .fontSize(10)
+            .text("Invoice Number:", 50, customerInformationTop)
+            .font("Helvetica-Bold")
+            .text(invoice.invoice_number, 150, customerInformationTop)
+            .font("Helvetica")
+            .text("Invoice Date:", 50, customerInformationTop + 15)
+            .text(new Date(invoice.created_at).toLocaleDateString(), 150, customerInformationTop + 15)
+            .text("Balance Due:", 50, customerInformationTop + 30)
+            .text(
+                this.formatCurrency(invoice.amount, invoice.currency),
+                150,
+                customerInformationTop + 30
+            )
+
+            .font("Helvetica-Bold")
+            .text(invoice.customer_name, 300, customerInformationTop)
+            .font("Helvetica")
+            .text(invoice.customer_email, 300, customerInformationTop + 15)
+            .moveDown();
+
+        this.generateHr(doc, 252);
+    }
+
+    private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
+        let i = 0;
+        const invoiceTableTop = 330;
+
+        doc.font("Helvetica-Bold");
+        this.generateTableRow(
+            doc,
+            invoiceTableTop,
+            "Item",
+            "Description",
+            "Unit Cost",
+            "Quantity",
+            "Line Total"
+        );
+        this.generateHr(doc, invoiceTableTop + 20);
+        doc.font("Helvetica");
+
+        // For now, we treat the invoice as having a single item based on the description
+        const position = invoiceTableTop + (i + 1) * 30;
+        this.generateTableRow(
+            doc,
+            position,
+            "1",
+            invoice.description || "Service Charge",
+            this.formatCurrency(invoice.amount, invoice.currency),
+            "1",
+            this.formatCurrency(invoice.amount, invoice.currency)
+        );
+
+        this.generateHr(doc, position + 20);
+
+        const subtotalPosition = invoiceTableTop + (i + 1) * 30 + 20;
+        this.generateTableRow(
+            doc,
+            subtotalPosition,
+            "",
+            "",
+            "Subtotal",
+            "",
+            this.formatCurrency(invoice.amount, invoice.currency)
+        );
+
+        const totalPosition = subtotalPosition + 25;
+        doc.font("Helvetica-Bold");
+        this.generateTableRow(
+            doc,
+            totalPosition,
+            "",
+            "",
+            "Total",
+            "",
+            this.formatCurrency(invoice.amount, invoice.currency)
+        );
+        doc.font("Helvetica");
+    }
 
     private static generateFooter(doc: PDFKit.PDFDocument) {
         doc
