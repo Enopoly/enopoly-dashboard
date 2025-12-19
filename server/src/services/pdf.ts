@@ -19,37 +19,33 @@ export class PdfService {
     }
 
     private static generateHeader(doc: PDFKit.PDFDocument) {
-        const companyName = process.env.COMPANY_NAME || "ENOPOLY";
-        const companyAddress = process.env.COMPANY_ADDRESS || "";
-        // Resolves to server/logo.png in Vercel or local
-        const defaultLogoPath = path.join(process.cwd(), "logo.png");
+        // Resolves to server/logo.png (assuming this file is in server/src/services/pdf.ts)
+        const defaultLogoPath = path.join(__dirname, "../../logo.png");
         const logoPath = process.env.COMPANY_LOGO_PATH || (fs.existsSync(defaultLogoPath) ? defaultLogoPath : null);
 
+        // Center Align Logic
         if (logoPath && fs.existsSync(logoPath)) {
-            doc.image(logoPath, 50, 45, { width: 50 });
-        }
+            // Page width is typically around 612 (Letter). 
+            // doc.page.width should be available. If not, default is 612.
+            const pageWidth = doc.page.width;
 
-        doc
-            .fillColor("#444444")
-            .fontSize(20)
-            .text(companyName, 110, 57);
-
-        if (companyAddress) {
-            doc
-                .fontSize(10)
-                .text(companyAddress, 200, 65, { align: "right" });
+            // INCREASED LOGO SIZE
+            const logoWidth = 250;
+            const logoX = (pageWidth - logoWidth) / 2;
+            doc.image(logoPath, logoX, 45, { width: logoWidth });
         }
 
         doc.moveDown();
     }
 
     private static generateCustomerInformation(doc: PDFKit.PDFDocument, invoice: Invoice) {
+        // Removed HR line for premium look
+        // this.generateHr(doc, 185);
+
         doc
             .fillColor("#444444")
             .fontSize(20)
             .text("Invoice", 50, 160);
-
-        this.generateHr(doc, 185);
 
         const customerInformationTop = 200;
 
@@ -74,7 +70,8 @@ export class PdfService {
             .text(invoice.customer_email, 300, customerInformationTop + 15)
             .moveDown();
 
-        this.generateHr(doc, 252);
+        // Removed HR line
+        // this.generateHr(doc, 252);
     }
 
     private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
@@ -91,7 +88,8 @@ export class PdfService {
             "Quantity",
             "Line Total"
         );
-        this.generateHr(doc, invoiceTableTop + 20);
+        // Removed HR line
+        // this.generateHr(doc, invoiceTableTop + 20);
         doc.font("Helvetica");
 
         // For now, we treat the invoice as having a single item based on the description
@@ -106,7 +104,8 @@ export class PdfService {
             this.formatCurrency(invoice.amount, invoice.currency)
         );
 
-        this.generateHr(doc, position + 20);
+        // Removed HR line
+        // this.generateHr(doc, position + 20);
 
         const subtotalPosition = invoiceTableTop + (i + 1) * 30 + 20;
         this.generateTableRow(
@@ -163,14 +162,7 @@ export class PdfService {
             .text(lineTotal, 0, y, { align: "right" });
     }
 
-    private static generateHr(doc: PDFKit.PDFDocument, y: number) {
-        doc
-            .strokeColor("#aaaaaa")
-            .lineWidth(1)
-            .moveTo(50, y)
-            .lineTo(550, y)
-            .stroke();
-    }
+
 
     private static formatCurrency(amount: number, currency: string = "USD"): string {
         return new Intl.NumberFormat("en-US", {
