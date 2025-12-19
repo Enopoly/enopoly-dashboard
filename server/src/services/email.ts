@@ -1,9 +1,8 @@
-import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
 export class EmailService {
     /**
-     * Send an invoice link to the customer
+     * Send an invoice link to the customer via EmailJS
      */
     static async sendInvoiceLink(
         to: string,
@@ -12,53 +11,61 @@ export class EmailService {
         customerName: string,
         invoiceNumber: string
     ) {
-        // Create a transporter using Gmail
-        // Note: For this to work, you need an "App Password" from Gmail
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.GMAIL_USER,      // your gmail address
-                pass: process.env.GMAIL_APP_PASSWORD // your app password
-            }
-        });
+        const serviceId = process.env.EMAILJS_SERVICE_ID;
+        const templateId = process.env.EMAILJS_TEMPLATE_ID;
+        const userId = process.env.EMAILJS_USER_ID;
+        const accessToken = process.env.EMAILJS_PRIVATE_KEY;
 
-        // Simulation Mode (if no credentials provided)
-        if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+        const companyName = process.env.COMPANY_NAME || 'ENOPOLY';
+
+        // Simulation / Log if keys missing
+        if (!serviceId || !templateId || !userId || !accessToken) {
             logger.info("============================================");
-            logger.info("EMAIL SIMULATION (GMAIL_USER not found)");
+            logger.info("EMAIL SIMULATION (EmailJS Keys not found)");
             logger.info(`To: ${to}`);
-            logger.info(`Subject: Invoice ${invoiceNumber} from ${process.env.COMPANY_NAME || 'ENOPOLY'}`);
-            logger.info(`Message: Verify your invoice of $${amount} here: ${link}`);
+            logger.info(`Template Params: customer=${customerName}, amount=${amount}, link=${link}, invoice=${invoiceNumber}`);
             logger.info("============================================");
             return;
         }
 
         try {
-            const companyName = process.env.COMPANY_NAME || 'ENOPOLY';
+            const payload = {
+                service_id: serviceId,
+                template_id: templateId,
+                user_id: userId,
+                accessToken: accessToken,
+                template_params: {
+                    to_email: to, // Ensure your template checks this if needed, or EmailJS uses "to" from params if configured? 
+                    // Usually EmailJS Service settings define who gets it. 
+                    // For "Send to Customer", you need to map a param to the "To Email" field in the template settings on EmailJS dashboard.
+                    // Let's assume user maps "to_email" or similar.
+                    // Standard EmailJS practice: You map one of these params to the To field in the UI.
+                    email: to, // Common field name
+                    customer_name: customerName,
+                    invoice_number: invoiceNumber,
+                    company_name: companyName,
+                    amount: amount.toFixed(2),
+                    link: link,
+                    year: new Date().getFullYear()
+                }
+            };
 
-            const info = await transporter.sendMail({
-                from: `"${companyName}" <${process.env.GMAIL_USER}>`,
-                to: to,
-                subject: `New Invoice ${invoiceNumber} from ${companyName}`,
-                html: `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h1>New Invoice</h1>
-                        <p>Hi ${customerName},</p>
-                        <p>${companyName} has sent you an invoice for <strong>$${amount.toFixed(2)}</strong>.</p>
-                        <p>Invoice Number: ${invoiceNumber}</p>
-                        <br/>
-                        <a href="${link}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Review and Pay</a>
-                        <br/><br/>
-                        <p>If the button doesn't work, copy this link:</p>
-                        <p>${link}</p>
-                    </div>
-                `
+            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
             });
 
-            logger.info(`Email sent: ${info.messageId}`);
+            if (response.ok) {
+                logger.info(`Email sent via EmailJS to ${to}`);
+            } else {
+                const text = await response.text();
+                logger.error(`EmailJS Failed: ${text}`);
+            }
         } catch (error) {
             logger.error('Failed to send email:', error);
-            // Don't crash the invoice creation if email fails
         }
     }
 }

@@ -9,15 +9,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-
-    useEffect(() => {
-        // Check if user is already logged in
-        const authStatus = localStorage.getItem('isAuthenticated');
-        if (authStatus === 'true') {
-            setIsAuthenticated(true);
-        }
-    }, []);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+        return localStorage.getItem('isAuthenticated') === 'true';
+    });
 
     const login = (username: string, password: string): boolean => {
         // Static credentials

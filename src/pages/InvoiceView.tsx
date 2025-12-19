@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
 import { PaymentForm } from "@/components/PaymentForm";
@@ -11,6 +12,7 @@ import { getInvoice } from "@/lib/api";
 export default function InvoiceView() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
 
     const { data: invoice, isLoading, error } = useQuery({
         queryKey: ["invoice", id],
@@ -48,15 +50,17 @@ export default function InvoiceView() {
         <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
                 {/* Back Button and Logo */}
-                <div className="mb-6 relative">
-                    <Button
-                        variant="ghost"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 gap-2"
-                        onClick={() => navigate('/')}
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        Back to Dashboard
-                    </Button>
+                <div className="mb-6 flex flex-col md:flex-row items-center justify-center relative gap-4">
+                    {isAuthenticated && (
+                        <Button
+                            variant="ghost"
+                            className="self-start md:self-auto md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 gap-2"
+                            onClick={() => navigate('/')}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                            Back to Dashboard
+                        </Button>
+                    )}
                     <div className="text-center">
                         <img
                             src="/logo.png"
