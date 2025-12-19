@@ -7,11 +7,13 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchInvoices } from "@/lib/api";
 
 export const NotificationBell = () => {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const navigate = useNavigate();
 
     useEffect(() => {
         loadNotifications();
@@ -76,10 +78,14 @@ export const NotificationBell = () => {
                             notifications.map((notif) => (
                                 <div
                                     key={notif.id}
-                                    className={`p-3 rounded-lg border ${notif.read ? 'bg-background' : 'bg-muted'
-                                        }`}
+                                    className={`p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors ${notif.read ? 'bg-background' : 'bg-muted'}`}
+                                    onClick={() => {
+                                        navigate(`/invoice/${notif.id}`);
+                                        // Optional: close popover? The popover closes automatically if focus lost, but might need manual close.
+                                        // For now, navigation usually works.
+                                    }}
                                 >
-                                    <p className="text-sm">{notif.message}</p>
+                                    <p className="text-sm font-medium">{notif.message}</p>
                                     <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
                                 </div>
                             ))
