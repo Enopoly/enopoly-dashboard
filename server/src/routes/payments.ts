@@ -2,6 +2,7 @@ import { Router } from "express";
 import { logger } from "../utils/logger";
 import { AuthorizeNetService } from "../services/authorizenet";
 import { getDatabase } from "../db/connection";
+import { EmailService } from "../services/email";
 
 const router = Router();
 const paymentGateway = new AuthorizeNetService();
@@ -57,6 +58,18 @@ router.post("/charge", async (req, res) => {
       ]);
 
       logger.info(`Payment successful for invoice ${invoiceId}. Transaction ID: ${result.transactionId}`);
+
+      // Send Receipt Email (Async)
+      if (invoice && invoice.customer_email) {
+        EmailService.sendReceiptEmail(
+          invoice.customer_email,
+          amount,
+          'Customer', // Ideally we fetch customer name too from invoice join
+          `INV-${invoiceId}`, // Fallback if we don't have full object
+          result.transactionId
+        ).catch(err => logger.error("Failed to send receipt email", err));
+      }
+
       return res.json({
         success: true,
         data: result,
