@@ -1,26 +1,44 @@
 import { getDatabase } from "../db/connection";
 import { logger } from "../utils/logger";
 
+export interface InvoiceItem {
+    id: number;
+    invoice_id: number;
+    description: string;
+    quantity: number;
+    price: number;
+}
+
 export interface Invoice {
     id: number;
     invoice_number: string;
     customer_email: string;
     customer_name: string;
     amount: number;
+    processing_fee: number;
     currency: string;
     status: "pending" | "paid" | "refunded" | "voided";
     description?: string;
     authorizenet_transaction_id?: string;
     created_at: string;
     updated_at: string;
+    items?: InvoiceItem[];
+}
+
+export interface InvoiceItemDTO {
+    description: string;
+    quantity: number;
+    price: number;
 }
 
 export interface CreateInvoiceDTO {
     customer_email: string;
     customer_name: string;
     amount: number;
+    processing_fee?: number;
     description?: string;
     currency?: string;
+    items?: InvoiceItemDTO[];
 }
 
 export class InvoiceService {
@@ -46,9 +64,9 @@ export class InvoiceService {
         try {
             const sql = `
         INSERT INTO invoices (
-          invoice_number, customer_email, customer_name, amount, currency, description, status
+          invoice_number, customer_email, customer_name, amount, processing_fee, currency, description, status
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, 'pending'
+          ?, ?, ?, ?, ?, ?, ?, 'pending'
         )
       `;
 
@@ -57,11 +75,24 @@ export class InvoiceService {
                 data.customer_email,
                 data.customer_name,
                 data.amount,
+                data.processing_fee || 0,
                 data.currency || "USD",
                 data.description || null
             ]);
 
-            const invoice = await this.getInvoiceById(Number(info.lastInsertRowid));
+            const invoiceId = Number(info.lastInsertRowid);
+
+            // Insert line items if present
+            if (data.items && data.items.length > 0) {
+                for (const item of data.items) {
+                    await db.execute(
+                        "INSERT INTO invoice_items (invoice_id, description, quantity, price) VALUES (?, ?, ?, ?)",
+                        [invoiceId, item.description, item.quantity, item.price]
+                    );
+                }
+            }
+
+            const invoice = await this.getInvoiceById(invoiceId);
             if (!invoice) throw new Error("Failed to retrieve created invoice");
             return invoice;
         } catch (error) {
@@ -80,6 +111,10 @@ export class InvoiceService {
         if (!invoice) {
             throw new Error(`Invoice with ID ${id} not found`);
         }
+
+        // Fetch items
+        const items = await db.query<InvoiceItem>("SELECT * FROM invoice_items WHERE invoice_id = ?", [id]);
+        invoice.items = items;
 
         return invoice;
     }

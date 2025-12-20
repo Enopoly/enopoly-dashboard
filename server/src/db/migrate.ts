@@ -26,6 +26,14 @@ export async function runMigrations(): Promise<void> {
     // Note: Local adapter uses exec(), Turso adapter uses executeMultiple()
     await db.exec(statements);
 
+    // Manual migration for processing_fee (safe to ignore if exists)
+    try {
+      await db.exec("ALTER TABLE invoices ADD COLUMN processing_fee REAL DEFAULT 0");
+      logger.info("Added processing_fee column to invoices");
+    } catch (e) {
+      // Column likely exists
+    }
+
     logger.info("Database migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);

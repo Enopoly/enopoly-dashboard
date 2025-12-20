@@ -75,7 +75,6 @@ export class PdfService {
     }
 
     private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
-        let i = 0;
         const invoiceTableTop = 330;
 
         doc.font("Helvetica-Bold");
@@ -88,26 +87,42 @@ export class PdfService {
             "Quantity",
             "Line Total"
         );
-        // Removed HR line
-        // this.generateHr(doc, invoiceTableTop + 20);
         doc.font("Helvetica");
 
-        // For now, we treat the invoice as having a single item based on the description
-        const position = invoiceTableTop + (i + 1) * 30;
-        this.generateTableRow(
-            doc,
-            position,
-            "1",
-            invoice.description || "Service Charge",
-            this.formatCurrency(invoice.amount, invoice.currency),
-            "1",
-            this.formatCurrency(invoice.amount, invoice.currency)
-        );
+        let currentPosition = invoiceTableTop;
 
-        // Removed HR line
-        // this.generateHr(doc, position + 20);
+        if (invoice.items && invoice.items.length > 0) {
+            invoice.items.forEach((item, index) => {
+                currentPosition = invoiceTableTop + (index + 1) * 30;
+                this.generateTableRow(
+                    doc,
+                    currentPosition,
+                    (index + 1).toString(),
+                    item.description,
+                    this.formatCurrency(item.price, invoice.currency),
+                    item.quantity.toString(),
+                    this.formatCurrency(item.price * item.quantity, invoice.currency)
+                );
+            });
+        } else {
+            // Backward compatibility for single description invoices
+            currentPosition = invoiceTableTop + 30;
+            const subtotalOnly = invoice.amount - (invoice.processing_fee || 0);
+            this.generateTableRow(
+                doc,
+                currentPosition,
+                "1",
+                invoice.description || "Service Charge",
+                this.formatCurrency(subtotalOnly, invoice.currency),
+                "1",
+                this.formatCurrency(subtotalOnly, invoice.currency)
+            );
+        }
 
-        const subtotalPosition = invoiceTableTop + (i + 1) * 30 + 20;
+        const subtotalPosition = currentPosition + 40;
+        const subtotal = invoice.amount - (invoice.processing_fee || 0);
+
+        doc.font("Helvetica-Bold");
         this.generateTableRow(
             doc,
             subtotalPosition,
@@ -115,10 +130,26 @@ export class PdfService {
             "",
             "Subtotal",
             "",
-            this.formatCurrency(invoice.amount, invoice.currency)
+            this.formatCurrency(subtotal, invoice.currency)
         );
+        doc.font("Helvetica");
 
-        const totalPosition = subtotalPosition + 25;
+        let lastPosition = subtotalPosition;
+        if (invoice.processing_fee && invoice.processing_fee > 0) {
+            const feePosition = subtotalPosition + 25;
+            this.generateTableRow(
+                doc,
+                feePosition,
+                "",
+                "",
+                "Processing Fee",
+                "",
+                this.formatCurrency(invoice.processing_fee, invoice.currency)
+            );
+            lastPosition = feePosition;
+        }
+
+        const totalPosition = lastPosition + 25;
         doc.font("Helvetica-Bold");
         this.generateTableRow(
             doc,

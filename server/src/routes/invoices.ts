@@ -66,7 +66,7 @@ router.get("/:id/pdf", async (req, res, next) => {
 // POST /api/invoices - Create new invoice
 router.post("/", async (req, res, next) => {
   try {
-    const { customer_email, customer_name, amount, description, currency } = req.body;
+    const { customer_email, customer_name, amount, description, currency, items, processing_fee } = req.body;
 
     if (!customer_email || !customer_name || !amount) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields");
@@ -76,8 +76,10 @@ router.post("/", async (req, res, next) => {
       customer_email,
       customer_name,
       amount: parseFloat(amount),
+      processing_fee: processing_fee ? parseFloat(processing_fee) : 0,
       description,
       currency,
+      items,
     });
 
     logger.info(`Created invoice ${invoice.invoice_number} for ${customer_email}`);

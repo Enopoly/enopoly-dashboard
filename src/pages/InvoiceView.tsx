@@ -94,15 +94,55 @@ export default function InvoiceView() {
                             </Card>
 
                             <Card>
-                                <CardContent className="p-6 space-y-4">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Subtotal</span>
-                                        <span>${invoice.amount.toFixed(2)}</span>
-                                    </div>
-                                    <Separator />
-                                    <div className="flex justify-between font-bold text-lg">
-                                        <span>Total Due</span>
-                                        <span>${invoice.amount.toFixed(2)}</span>
+                                <CardHeader>
+                                    <CardTitle>Invoice Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {invoice.items && invoice.items.length > 0 ? (
+                                        <div className="border rounded-md overflow-hidden">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-muted">
+                                                    <tr>
+                                                        <th className="p-3 text-left font-medium">Item</th>
+                                                        <th className="p-3 text-right font-medium">Qty</th>
+                                                        <th className="p-3 text-right font-medium">Price</th>
+                                                        <th className="p-3 text-right font-medium">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {invoice.items.map((item, i) => (
+                                                        <tr key={i}>
+                                                            <td className="p-3">{item.description}</td>
+                                                            <td className="p-3 text-right">{item.quantity}</td>
+                                                            <td className="p-3 text-right">${item.price.toFixed(2)}</td>
+                                                            <td className="p-3 text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-600">{invoice.description || "Services rendered"}</p>
+                                    )}
+
+                                    <Separator className="my-4" />
+
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Subtotal</span>
+                                            <span>${(invoice.amount - (invoice.processing_fee || 0)).toFixed(2)}</span>
+                                        </div>
+                                        {invoice.processing_fee && invoice.processing_fee > 0 ? (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Processing Fee</span>
+                                                <span>${invoice.processing_fee.toFixed(2)}</span>
+                                            </div>
+                                        ) : null}
+                                        <Separator />
+                                        <div className="flex justify-between font-bold text-lg">
+                                            <span>Total Due</span>
+                                            <span>${invoice.amount.toFixed(2)}</span>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

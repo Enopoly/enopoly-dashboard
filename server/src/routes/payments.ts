@@ -31,8 +31,11 @@ router.post("/charge", async (req, res) => {
     const result = await paymentGateway.charge(amount, cardData, invoiceId);
 
     if (result.success) {
-      // Update invoice status (Async)
-      await db.execute("UPDATE invoices SET status = 'paid' WHERE id = ?", [invoiceId]);
+      // Update invoice status and transaction ID (Async)
+      await db.execute(
+        "UPDATE invoices SET status = 'paid', authorizenet_transaction_id = ? WHERE id = ?",
+        [result.transactionId, invoiceId]
+      );
 
       // Log transaction (Async)
       await db.execute(`
@@ -86,6 +89,20 @@ router.post("/refund/:id", async (req, res) => {
     const result = await paymentGateway.refund(transactionId, amount);
 
     if (result.success) {
+      // Update local DB
+      const db = getDatabase();
+
+      // Get invoice ID from transaction
+      const tx = await db.get<{ invoice_id: number }>("SELECT invoice_id FROM transactions WHERE authorizenet_transaction_id = ?", [transactionId]);
+
+      // Update transaction status
+      await db.execute("UPDATE transactions SET status = 'refunded' WHERE authorizenet_transaction_id = ?", [transactionId]);
+
+      // Update invoice status if found
+      if (tx && tx.invoice_id) {
+        await db.execute("UPDATE invoices SET status = 'refunded' WHERE id = ?", [tx.invoice_id]);
+      }
+
       res.json({
         success: true,
         data: result,

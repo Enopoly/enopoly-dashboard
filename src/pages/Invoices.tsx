@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchInvoices, createInvoice } from "@/lib/api";
+import { fetchInvoices, createInvoice, refundTransaction } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,18 +23,54 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { InvoiceItem } from "@/lib/api";
 
 const Invoices = () => {
     const queryClient = useQueryClient();
     const [isOpen, setIsOpen] = useState(false);
+    const [items, setItems] = useState<InvoiceItem[]>([
+        { description: "", quantity: 1, price: 0 }
+    ]);
+    const [autoFee, setAutoFee] = useState(true);
+    const [customFee, setCustomFee] = useState("");
+
     const [formData, setFormData] = useState({
         customer_name: "",
         customer_email: "",
-        amount: "",
         description: "",
     });
+
+    // Calculate totals
+    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const fee = autoFee ? Number((subtotal * 0.03).toFixed(2)) : (parseFloat(customFee) || 0);
+    const totalAmount = subtotal + fee;
+
+    const addItem = () => {
+        setItems([...items, { description: "", quantity: 1, price: 0 }]);
+    };
+
+    const removeItem = (index: number) => {
+        setItems(items.filter((_, i) => i !== index));
+    };
+
+    const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setItems(newItems);
+    };
 
     const { data: invoices = [], isLoading } = useQuery({
         queryKey: ["invoices"],
@@ -56,25 +92,50 @@ const Invoices = () => {
                 });
             }
             setIsOpen(false);
-            setFormData({ customer_name: "", customer_email: "", amount: "", description: "" });
+            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setAutoFee(true);
+            setCustomFee("");
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to create invoice");
         },
     });
+    const [refundTxId, setRefundTxId] = useState<string | null>(null);
 
+    const refundMutation = useMutation({
+        mutationFn: refundTransaction,
+        onSuccess: () => {
+            toast.success("Invoice refunded successfully");
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+            setRefundTxId(null);
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to refund invoice");
+        }
+    });
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.customer_name || !formData.customer_email || !formData.amount) {
-            toast.error("Please fill in all required fields");
+
+        // Validate items
+        const validItems = items.filter(i => i.description && i.price > 0);
+        if (validItems.length === 0) {
+            toast.error("Please add at least one valid item");
+            return;
+        }
+
+        if (!formData.customer_name || !formData.customer_email) {
+            toast.error("Please fill in customer details");
             return;
         }
 
         createMutation.mutate({
             ...formData,
-            amount: parseFloat(formData.amount),
+            amount: totalAmount, // This is the Grand Total sent to backend/payment gateway
+            processing_fee: fee,
             currency: "USD",
+            items: validItems,
         });
     };
 
@@ -133,33 +194,110 @@ const Invoices = () => {
                                         required
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="amount">Amount ($)</Label>
-                                    <Input
-                                        id="amount"
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        value={formData.amount}
-                                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                        required
-                                    />
+                                <Label>Line Items</Label>
+                                <div className="border rounded-md overflow-hidden">
+                                    <div className="grid grid-cols-12 gap-2 bg-muted p-2 text-xs font-medium">
+                                        <div className="col-span-6">Description</div>
+                                        <div className="col-span-2">Qty</div>
+                                        <div className="col-span-3">Price</div>
+                                        <div className="col-span-1"></div>
+                                    </div>
+                                    <div className="p-2 space-y-2">
+                                        {items.map((item, index) => (
+                                            <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                                                <div className="col-span-6">
+                                                    <Input
+                                                        placeholder="Item name"
+                                                        value={item.description}
+                                                        onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={item.quantity}
+                                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                                                        className="px-2"
+                                                    />
+                                                </div>
+                                                <div className="col-span-3">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={item.price}
+                                                            onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                                                            className="pl-7 px-4"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-1 text-center">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        onClick={() => removeItem(index)}
+                                                        disabled={items.length === 1}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full mt-2">
+                                            <Plus className="mr-2 h-3 w-3" /> Add Item
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="description">Description (Optional)</Label>
-                                    <Input
-                                        id="description"
-                                        placeholder="Services rendered..."
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    />
+
+                                <div className="space-y-4 border-t pt-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-2">
+                                            <Switch id="auto-fee" checked={autoFee} onCheckedChange={setAutoFee} />
+                                            <Label htmlFor="auto-fee">Auto-calculate 3% Fee</Label>
+                                        </div>
+                                        <div className="relative w-32">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                                            <Input
+                                                type="number"
+                                                value={autoFee ? fee : customFee}
+                                                onChange={(e) => setCustomFee(e.target.value)}
+                                                disabled={autoFee}
+                                                className="h-8 pl-6 text-right"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Subtotal:</span>
+                                        <span>${subtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-lg">
+                                        <span>Total:</span>
+                                        <span>${totalAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="description">Description (Optional)</Label>
+                                        <Input
+                                            id="description"
+                                            placeholder="Services rendered..."
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button type="submit" disabled={createMutation.isPending}>
+                                            {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            Create & Send
+                                        </Button>
+                                    </DialogFooter>
                                 </div>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={createMutation.isPending}>
-                                        {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                        Create & Send
-                                    </Button>
-                                </DialogFooter>
                             </form>
                         </DialogContent>
                     </Dialog>
@@ -213,6 +351,17 @@ const Invoices = () => {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    {invoice.status === 'paid' && invoice.authorizenet_transaction_id && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => setRefundTxId(invoice.authorizenet_transaction_id!)}
+                                                            title="Refund Invoice"
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                     <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>
                                                         <ExternalLink className="h-4 w-4" />
                                                     </Button>
@@ -226,6 +375,27 @@ const Invoices = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={!!refundTxId} onOpenChange={(open) => !open && setRefundTxId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will refund the payment for this invoice. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => refundTxId && refundMutation.mutate(refundTxId)}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Confirm Refund
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

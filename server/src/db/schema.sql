@@ -11,9 +11,21 @@ CREATE TABLE IF NOT EXISTS invoices (
   currency TEXT DEFAULT 'USD',
   status TEXT CHECK(status IN ('pending', 'paid', 'refunded', 'voided')) DEFAULT 'pending',
   description TEXT,
+  processing_fee REAL DEFAULT 0,
   authorizenet_transaction_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Invoice Items table
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id INTEGER NOT NULL,
+  description TEXT NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  price REAL NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 );
 
 -- Transactions table

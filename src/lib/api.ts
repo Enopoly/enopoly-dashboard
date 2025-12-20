@@ -22,17 +22,26 @@ export const generatePayoutId = (): string => {
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002/api";
 
+export interface InvoiceItem {
+  id?: number;
+  description: string;
+  quantity: number;
+  price: number;
+}
+
 export interface Invoice {
   id: number;
   invoice_number: string;
   customer_email: string;
   customer_name: string;
   amount: number;
+  processing_fee?: number;
   currency: string;
   status: "pending" | "paid" | "refunded" | "voided";
   description?: string;
   created_at: string;
   updated_at: string;
+  items?: InvoiceItem[];
 }
 
 export const fetchInvoices = async (): Promise<Invoice[]> => {
@@ -65,4 +74,15 @@ export const fetchTransactions = async (): Promise<any[]> => {
   const data = await response.json();
   if (!data.success) throw new Error(data.message);
   return data.data;
+};
+
+export const refundTransaction = async (transactionId: string): Promise<any> => {
+  const response = await fetch(`${API_URL}/payments/refund`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transactionId }),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "Refund failed");
+  return data;
 };

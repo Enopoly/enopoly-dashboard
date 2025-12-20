@@ -4,9 +4,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Activity, TrendingUp, CheckCircle, Copy } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useQuery } from "@tanstack/react-query";
-import { fetchTransactions } from "@/lib/api";
+import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchTransactions, refundTransaction } from "@/lib/api";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, RotateCcw } from "lucide-react";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -23,6 +36,21 @@ const Dashboard = () => {
     queryKey: ['transactions'],
     queryFn: fetchTransactions,
     initialData: []
+  });
+
+  const [refundTxId, setRefundTxId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const refundMutation = useMutation({
+    mutationFn: refundTransaction,
+    onSuccess: () => {
+      toast.success("Transaction refunded successfully");
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      setRefundTxId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to refund transaction");
+    }
   });
 
   const handleCopyTransactionId = async (id: string) => {
@@ -88,8 +116,15 @@ const Dashboard = () => {
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                <YAxis
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [`$${value}`, "Revenue"]}
+                  contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ fill: 'hsl(var(--chart-1))', r: 4 }} animationDuration={1500} />
               </LineChart>
             </ResponsiveContainer>
@@ -131,9 +166,40 @@ const Dashboard = () => {
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">{transaction.customer} • {transaction.date}</p>
                 </div>
                 <p className="text-base sm:text-lg font-bold sm:text-right">{transaction.amount}</p>
+                {transaction.status === 'succeeded' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="sm:ml-4 text-xs h-8 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setRefundTxId(transaction.id)}
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" /> Refund
+                  </Button>
+                )}
               </div>
             ))}
           </div>
+
+          <AlertDialog open={!!refundTxId} onOpenChange={(open) => !open && setRefundTxId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will refund the transaction {refundTxId}. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => refundTxId && refundMutation.mutate(refundTxId)}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Confirm Refund
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
