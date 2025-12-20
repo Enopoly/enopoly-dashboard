@@ -66,7 +66,7 @@ router.post("/charge", async (req, res) => {
           amount,
           'Customer', // Ideally we fetch customer name too from invoice join
           `INV-${invoiceId}`, // Fallback if we don't have full object
-          result.transactionId || "UNKNOWN"
+          result.transactionId || "UNKNOWN" || "UNKNOWN"
         ).catch(err => logger.error("Failed to send receipt email", err));
       }
 
