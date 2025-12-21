@@ -133,11 +133,11 @@ const Invoices = () => {
         if (invoice.items && invoice.items.length > 0) {
             setItems(invoice.items.map((i: any) => ({
                 description: i.description,
-                quantity: i.quantity,
-                price: i.price
+                quantity: Number(i.quantity) || 1,
+                price: Number(i.price) || 0
             })));
         } else {
-            setItems([{ description: "Service Charge", quantity: 1, price: invoice.amount }]);
+            setItems([{ description: "Service Charge", quantity: 1, price: Number(invoice.amount) || 0 }]);
         }
 
         // Handle fee logic (reverse engineering if possible, or just reset)
@@ -292,7 +292,11 @@ const Invoices = () => {
                                                             min="0"
                                                             step="0.01"
                                                             value={item.price}
-                                                            onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                                                            onChange={(e) => {
+                                                                const val = parseFloat(e.target.value);
+                                                                updateItem(index, 'price', isNaN(val) ? 0 : val);
+                                                            }}
+                                                            onFocus={(e) => e.target.select()}
                                                             className="pl-7 px-4"
                                                         />
                                                     </div>
