@@ -43,15 +43,16 @@ export interface CreateInvoiceDTO {
 
 export class InvoiceService {
     /**
-     * Generate a unique invoice number (INV-YYYY-XXXX)
+     * Generate a unique invoice number (POYYXXXX)
+     * Example: PO251271 (PO + Year 25 + Random 1271)
      */
     static generateInvoiceNumber(): string {
         const date = new Date();
-        const year = date.getFullYear();
+        const year = date.getFullYear().toString().slice(-2); // Last 2 digits (e.g., "25")
         const random = Math.floor(Math.random() * 10000)
             .toString()
             .padStart(4, "0");
-        return `INV-${year}-${random}`;
+        return `PO${year}${random}`;
     }
 
     /**

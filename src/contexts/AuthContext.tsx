@@ -14,10 +14,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const login = (username: string, password: string): boolean => {
-        // Static credentials
-        if (username === 'admin' && password === '12345') {
+        // Multi-user credentials
+        // Multi-user credentials
+        const USERS = {
+            'sales@enopolydistribution.com': 'Manifest101$',
+            'admin': 'Kinglife101$$$'
+        };
+
+        const normalizedUsername = username.toLowerCase();
+
+        if (USERS[normalizedUsername as keyof typeof USERS] === password) {
             setIsAuthenticated(true);
             localStorage.setItem('isAuthenticated', 'true');
+            // Ideally we store the username too for personalization, but sticking to existing pattern for now
             return true;
         }
         return false;

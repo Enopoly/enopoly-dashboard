@@ -7,193 +7,222 @@ export class PdfService {
     /**
      * Generate Invoice PDF
      */
+    /**
+     * Generate Invoice PDF
+     */
     static generateInvoicePDF(invoice: Invoice): PDFKit.PDFDocument {
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
 
         this.generateHeader(doc);
-        this.generateCustomerInformation(doc, invoice);
+        this.generateAddressSection(doc, invoice);
+        this.generateOrderDetails(doc, invoice);
         this.generateInvoiceTable(doc, invoice);
-        this.generateFooter(doc);
+        this.generatePaymentFooter(doc);
 
         return doc;
     }
 
     private static generateHeader(doc: PDFKit.PDFDocument) {
-        // Resolves to server/logo.png (assuming this file is in server/src/services/pdf.ts)
         const defaultLogoPath = path.join(__dirname, "../../logo.png");
         const logoPath = process.env.COMPANY_LOGO_PATH || (fs.existsSync(defaultLogoPath) ? defaultLogoPath : null);
 
-        // Center Align Logic
+        // 1. Logo (Top Left)
         if (logoPath && fs.existsSync(logoPath)) {
-            // Page width is typically around 612 (Letter). 
-            // doc.page.width should be available. If not, default is 612.
-            const pageWidth = doc.page.width;
-
-            // INCREASED LOGO SIZE
-            const logoWidth = 250;
-            const logoX = (pageWidth - logoWidth) / 2;
-            doc.image(logoPath, logoX, 45, { width: logoWidth });
+            doc.image(logoPath, 50, 45, { width: 180 });
         }
 
-        doc.moveDown();
+        // 2. Title "SALES INVOICE" (Top Right)
+        doc
+            .font("Helvetica-Bold")
+            .fontSize(24)
+            .text("SALES INVOICE", 300, 45, { align: "right" });
+
+        // 3. Company Info (Top Right Below Title)
+        doc
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .text("ENOPOLY DISTRIBUTION", 300, 80, { align: "right" })
+            .font("Helvetica")
+            .text("11710 N 51st", 300, 95, { align: "right" })
+            .text("Temple Terrace, Florida 33617", 300, 110, { align: "right" })
+            .text("United States", 300, 125, { align: "right" })
+            .moveDown()
+            .text("Phone: (561) 515-7267", 300, 150, { align: "right" })
+            .text("Fax: /Email: sales@enopolydistribution.com", 300, 165, { align: "right" })
+            .text("www.enopolybrands.com/www.enopolydistribution.com", 300, 180, { align: "right" });
+
+        // HR Line
+        this.generateHr(doc, 200);
     }
 
-    private static generateCustomerInformation(doc: PDFKit.PDFDocument, invoice: Invoice) {
-        // Removed HR line for premium look
-        // this.generateHr(doc, 185);
+    private static generateAddressSection(doc: PDFKit.PDFDocument, invoice: Invoice) {
+        const top = 220;
 
+        // BILL TO
         doc
-            .fillColor("#444444")
-            .fontSize(20)
-            .text("Invoice", 50, 160);
-
-        const customerInformationTop = 200;
-
-        doc
+            .font("Helvetica-Bold")
             .fontSize(10)
-            .text("Invoice Number:", 50, customerInformationTop)
-            .font("Helvetica-Bold")
-            .text(invoice.invoice_number, 150, customerInformationTop)
+            .fillColor("#aaaaaa")
+            .text("BILL TO", 50, top)
+            .fillColor("#000000")
+            .text(invoice.customer_name, 50, top + 15)
             .font("Helvetica")
-            .text("Invoice Date:", 50, customerInformationTop + 15)
-            .text(new Date(invoice.created_at).toLocaleDateString(), 150, customerInformationTop + 15)
-            .text("Balance Due:", 50, customerInformationTop + 30)
-            .text(
-                this.formatCurrency(invoice.amount, invoice.currency),
-                150,
-                customerInformationTop + 30
-            )
+            .text(invoice.customer_email, 50, top + 30)
+            // Placeholder address if not in DB, matching style
+            .text("United States", 50, top + 45);
 
+        // SHIP TO (Mirroring Bill To for now as we don't have separate ship addr)
+        doc
             .font("Helvetica-Bold")
-            .text(invoice.customer_name, 300, customerInformationTop)
+            .fontSize(10)
+            .fillColor("#aaaaaa")
+            .text("SHIP TO", 250, top)
+            .fillColor("#000000")
+            .text(invoice.customer_name, 250, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 300, customerInformationTop + 15)
-            .moveDown();
+            .text(invoice.customer_email, 250, top + 30)
+            .text("United States", 250, top + 45);
+    }
 
-        // Removed HR line
-        // this.generateHr(doc, 252);
+    private static generateOrderDetails(doc: PDFKit.PDFDocument, invoice: Invoice) {
+        const top = 220;
+        const lineHeight = 15;
+
+        // Define columns to prevent overlap
+        // Label Column: Width 150, Ends at 450 (Start ~300)
+        // Value Column: Width 100, Ends at 560 (Start 460)
+        const labelX = 300;
+        const labelWidth = 150;
+        const valueX = 460;
+        const valueWidth = 100;
+
+        doc.font("Helvetica-Bold").fontSize(10);
+
+        // Invoice Number
+        doc.text("Invoice Number:", labelX, top, { width: labelWidth, align: "right" });
+        doc.text(invoice.invoice_number, valueX, top, { width: valueWidth, align: "right" });
+
+        // P.O./S.O. Number
+        const poNumber = invoice.invoice_number.replace('PO', '') || invoice.id.toString();
+        doc.text("P.O./S.O. Number:", labelX, top + lineHeight, { width: labelWidth, align: "right" });
+        doc.text(poNumber, valueX, top + lineHeight, { width: valueWidth, align: "right" });
+
+        // Invoice Date
+        doc.text("Invoice Date:", labelX, top + lineHeight * 2, { width: labelWidth, align: "right" });
+        doc.font("Helvetica").text(new Date(invoice.created_at).toLocaleDateString(), valueX, top + lineHeight * 2, { width: valueWidth, align: "right" });
+
+        // Payment Due
+        const dueDate = new Date(invoice.created_at);
+        dueDate.setDate(dueDate.getDate() + 7);
+        doc.font("Helvetica-Bold").text("Payment Due:", labelX, top + lineHeight * 3, { width: labelWidth, align: "right" });
+        doc.font("Helvetica").text(dueDate.toLocaleDateString(), valueX, top + lineHeight * 3, { width: valueWidth, align: "right" });
+
+        // Amount Due
+        doc.rect(labelX + 60, top + lineHeight * 4 - 2, (labelWidth - 60) + valueWidth + 10, 18).fill("#f4f4f4");
+
+        doc.fillColor("#000000");
+        doc.font("Helvetica-Bold").text("Amount Due (USD):", labelX, top + lineHeight * 4, { width: labelWidth, align: "right" });
+        doc.text(this.formatCurrency(invoice.amount, invoice.currency), valueX, top + lineHeight * 4, { width: valueWidth, align: "right" });
     }
 
     private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
-        const invoiceTableTop = 330;
+        const tableTop = 320;
 
-        doc.font("Helvetica-Bold");
-        this.generateTableRow(
-            doc,
-            invoiceTableTop,
-            "Item",
-            "Description",
-            "Unit Cost",
-            "Quantity",
-            "Line Total"
-        );
+        // Header Background
+        doc.rect(50, tableTop, 512, 25).fill("#231f20");
+        doc.fillColor("#ffffff");
+
+        doc.font("Helvetica-Bold").fontSize(10);
+
+        // Columns: Item | Quantity | Price | Amount
+        doc.text("Items", 60, tableTop + 7);
+        doc.text("Quantity", 300, tableTop + 7, { width: 50, align: "center" });
+        doc.text("Price", 400, tableTop + 7, { width: 80, align: "right" });
+        doc.text("Amount", 500, tableTop + 7, { width: 50, align: "right" }); // Manually adjusting right align pos
+
+        doc.fillColor("#000000");
         doc.font("Helvetica");
 
-        let currentPosition = invoiceTableTop;
+        let currentPosition = tableTop + 35;
+        let subtotal = 0;
 
         if (invoice.items && invoice.items.length > 0) {
-            invoice.items.forEach((item, index) => {
-                currentPosition = invoiceTableTop + (index + 1) * 30;
-                this.generateTableRow(
-                    doc,
-                    currentPosition,
-                    (index + 1).toString(),
-                    item.description,
-                    this.formatCurrency(item.price, invoice.currency),
-                    item.quantity.toString(),
-                    this.formatCurrency(item.price * item.quantity, invoice.currency)
-                );
+            invoice.items.forEach((item) => {
+                const amount = item.price * item.quantity;
+                subtotal += amount;
+
+                // Item Code/Desc
+                doc.font("Helvetica-Bold").text("ITEM", 60, currentPosition); // Placeholder code
+                doc.font("Helvetica").text(item.description, 60, currentPosition + 12, { width: 220 });
+
+                doc.text(item.quantity.toString(), 300, currentPosition + 5, { width: 50, align: "center" });
+                doc.text(this.formatCurrency(item.price, invoice.currency), 400, currentPosition + 5, { width: 80, align: "right" });
+                doc.text(this.formatCurrency(amount, invoice.currency), 470, currentPosition + 5, { width: 80, align: "right" });
+
+                currentPosition += 40; // Spacing
             });
-        } else {
-            // Backward compatibility for single description invoices
-            currentPosition = invoiceTableTop + 30;
-            const subtotalOnly = invoice.amount - (invoice.processing_fee || 0);
-            this.generateTableRow(
-                doc,
-                currentPosition,
-                "1",
-                invoice.description || "Service Charge",
-                this.formatCurrency(subtotalOnly, invoice.currency),
-                "1",
-                this.formatCurrency(subtotalOnly, invoice.currency)
-            );
         }
 
-        const subtotalPosition = currentPosition + 40;
-        const subtotal = invoice.amount - (invoice.processing_fee || 0);
+        // Horizontal Line
+        this.generateHr(doc, currentPosition);
+        currentPosition += 15;
+
+        // Totals Section
+        const totalX = 400;
+        const valX = 470;
 
         doc.font("Helvetica-Bold");
-        this.generateTableRow(
-            doc,
-            subtotalPosition,
-            "",
-            "",
-            "Subtotal",
-            "",
-            this.formatCurrency(subtotal, invoice.currency)
-        );
-        doc.font("Helvetica");
+        doc.text("Total:", totalX, currentPosition, { width: 80, align: "right" });
+        doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
 
-        let lastPosition = subtotalPosition;
-        if (invoice.processing_fee && invoice.processing_fee > 0) {
-            const feePosition = subtotalPosition + 25;
-            this.generateTableRow(
-                doc,
-                feePosition,
-                "",
-                "",
-                "Processing Fee",
-                "",
-                this.formatCurrency(invoice.processing_fee, invoice.currency)
-            );
-            lastPosition = feePosition;
-        }
+        currentPosition += 20;
 
-        const totalPosition = lastPosition + 25;
+        // Amount Due Bottom
         doc.font("Helvetica-Bold");
-        this.generateTableRow(
-            doc,
-            totalPosition,
-            "",
-            "",
-            "Total",
-            "",
-            this.formatCurrency(invoice.amount, invoice.currency)
-        );
-        doc.font("Helvetica");
+        doc.text("Amount Due (USD):", totalX - 50, currentPosition, { width: 130, align: "right" });
+        doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
     }
 
-    private static generateFooter(doc: PDFKit.PDFDocument) {
+    private static generatePaymentFooter(doc: PDFKit.PDFDocument) {
+        const top = 550; // Ensure enough space
+
+        doc.font("Helvetica-Bold").fontSize(10).fillColor("#aaaaaa");
+        doc.text("Notes / Terms", 50, top);
+        doc.text("PAYMENT INFO:", 50, top + 15);
+
+        doc.fillColor("#000000").font("Helvetica").fontSize(9);
+        const startY = top + 35;
+        let y = startY;
+
+        // Zelle
+        doc.text("Zelle Account Details:", 50, y);
+        doc.text("enopdistributionbofa@gmail.com", 50, y + 12);
+        y += 30;
+
+        // Wire
+        doc.text("Bank Wire Account Details:", 50, y);
+        doc.text("Enopoly Distribution Llc", 50, y + 12);
+        doc.text("ACCT: 229059578827", 50, y + 24);
+        doc.text("Routing: 026009593", 50, y + 36);
+        doc.text("11710 N 51st, Temple Terrace, Florida,", 50, y + 48);
+        doc.text("33617  U.S.A", 50, y + 60);
+        y += 80;
+
+        // ACH
+        doc.text("ACH Account Details:", 50, y);
+        doc.text("Enopoly Distribution Llc", 50, y + 12);
+        doc.text("ACCT: 229059578827", 50, y + 24);
+        doc.text("Routing: 063100277", 50, y + 36);
+    }
+
+    private static generateHr(doc: PDFKit.PDFDocument, y: number) {
         doc
-            .fontSize(10)
-            .text(
-                "Payment is due within 15 days. Thank you for your business.",
-                50,
-                // Moved up to 730 to prevent extra page (780 might hit bottom margin)
-                730,
-                { align: "center", width: 500 }
-            );
+            .strokeColor("#aaaaaa")
+            .lineWidth(1)
+            .moveTo(50, y)
+            .lineTo(562, y) // 50 margin + 512 width
+            .stroke();
     }
-
-    private static generateTableRow(
-        doc: PDFKit.PDFDocument,
-        y: number,
-        item: string,
-        description: string,
-        unitCost: string,
-        quantity: string,
-        lineTotal: string
-    ) {
-        doc
-            .fontSize(10)
-            .text(item, 50, y)
-            .text(description, 150, y)
-            .text(unitCost, 280, y, { width: 90, align: "right" })
-            .text(quantity, 370, y, { width: 90, align: "right" })
-            .text(lineTotal, 0, y, { align: "right" });
-    }
-
-
 
     private static formatCurrency(amount: number, currency: string = "USD"): string {
         return new Intl.NumberFormat("en-US", {
