@@ -19,7 +19,15 @@ router.post("/charge", async (req, res) => {
       });
     }
 
-    logger.info(`Processing payment for invoice ${invoiceId}`);
+    logger.info(`Processing payment for invoice ${invoiceId}. Amount from request: ${amount}`);
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Amount: Payment amount must be greater than 0."
+      });
+    }
 
     // Fetch invoice to get customer email (Async)
     const invoice = await db.get<{ customer_email: string }>("SELECT customer_email FROM invoices WHERE id = ?", [invoiceId]);
@@ -29,13 +37,31 @@ router.post("/charge", async (req, res) => {
     }
 
     // Payment gateway is already async
-    const result = await paymentGateway.charge(amount, cardData, invoiceId);
+    const result = await paymentGateway.charge(numericAmount, cardData, invoiceId);
 
     if (result.success) {
+      let finalTransactionId = result.transactionId;
+
+      // Check if we got a valid transaction ID (not 0 and not empty)
+      if (!result.transactionId || result.transactionId === '0') {
+        if (result.transactionId === '0') {
+          // Allow Test Mode for testing purposes
+          finalTransactionId = `TEST-TX-${Date.now()}`;
+          logger.warn(`Payment Gateway in Test Mode (ID: 0). Using fallback ID: ${finalTransactionId}`);
+        } else {
+          // Real failure (no ID at all)
+          logger.error(`Payment successful but Invalid Transaction ID returned: ${result.transactionId}`);
+          return res.status(400).json({
+            success: false,
+            message: "Payment Gateway Error: No Transaction ID returned."
+          });
+        }
+      }
+
       // Update invoice status and transaction ID (Async)
       await db.execute(
         "UPDATE invoices SET status = 'paid', authorizenet_transaction_id = ? WHERE id = ?",
-        [result.transactionId, invoiceId]
+        [finalTransactionId, invoiceId]
       );
 
       // Log transaction (Async)
@@ -52,12 +78,12 @@ router.post("/charge", async (req, res) => {
         VALUES (?, ?, ?, 'approved', 'charge', ?, datetime('now'))
       `, [
         invoiceId,
-        result.transactionId || `TRANS-${Date.now()}`,
+        finalTransactionId,
         amount,
         result.message || "Payment successful"
       ]);
 
-      logger.info(`Payment successful for invoice ${invoiceId}. Transaction ID: ${result.transactionId}`);
+      logger.info(`Payment successful for invoice ${invoiceId}. Transaction ID: ${finalTransactionId}`);
 
       // Send Receipt Email (Async)
       if (invoice && invoice.customer_email) {

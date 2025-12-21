@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchInvoices, createInvoice, refundTransaction } from "@/lib/api";
+import { fetchInvoices, createInvoice, refundTransaction, updateInvoice } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw } from "lucide-react";
+import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -52,6 +52,7 @@ const Invoices = () => {
         customer_email: "",
         description: "",
     });
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // Calculate totals
     const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
@@ -102,6 +103,61 @@ const Invoices = () => {
             toast.error(error.message || "Failed to create invoice");
         },
     });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number; data: any }) => updateInvoice(id, data),
+        onSuccess: () => {
+            toast.success("Invoice updated successfully!");
+            setIsOpen(false);
+            setEditingId(null);
+            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setAutoFee(true);
+            setCustomFee("");
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to update invoice");
+        },
+    });
+
+    const startEdit = (invoice: any) => {
+        setEditingId(invoice.id);
+        setFormData({
+            customer_name: invoice.customer_name,
+            customer_email: invoice.customer_email,
+            description: invoice.description || "",
+        });
+
+        // Map items or default to one
+        if (invoice.items && invoice.items.length > 0) {
+            setItems(invoice.items.map((i: any) => ({
+                description: i.description,
+                quantity: i.quantity,
+                price: i.price
+            })));
+        } else {
+            setItems([{ description: "Service Charge", quantity: 1, price: invoice.amount }]);
+        }
+
+        // Handle fee logic (reverse engineering if possible, or just reset)
+        // Simplification: Reset auto fee
+        setAutoFee(false);
+        setCustomFee((invoice.processing_fee || 0).toString());
+
+        setIsOpen(true);
+    };
+
+    const handleOpenChange = (open: boolean) => {
+        if (!open) {
+            setEditingId(null);
+            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setAutoFee(true);
+            setCustomFee("");
+        }
+        setIsOpen(open);
+    }
     const [refundTxId, setRefundTxId] = useState<string | null>(null);
 
     const refundMutation = useMutation({
@@ -130,13 +186,19 @@ const Invoices = () => {
             return;
         }
 
-        createMutation.mutate({
+        const payload = {
             ...formData,
-            amount: totalAmount, // This is the Grand Total sent to backend/payment gateway
+            amount: totalAmount,
             processing_fee: fee,
             currency: "USD",
             items: validItems,
-        });
+        };
+
+        if (editingId) {
+            updateMutation.mutate({ id: editingId, data: payload });
+        } else {
+            createMutation.mutate(payload);
+        }
     };
 
     const getStatusColor = (status: string) => {
@@ -159,7 +221,7 @@ const Invoices = () => {
                     <Button variant="outline" size="icon" onClick={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
                         <DialogTrigger asChild>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" /> Create Invoice
@@ -167,9 +229,9 @@ const Invoices = () => {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Create New Invoice</DialogTitle>
+                                <DialogTitle>{editingId ? "Edit Invoice" : "Create New Invoice"}</DialogTitle>
                                 <DialogDescription>
-                                    Enter the invoice details below. An email will be sent to the customer automatically.
+                                    {editingId ? "Update the invoice details below." : "Enter the invoice details below. An email will be sent to the customer automatically."}
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-4">
@@ -292,9 +354,9 @@ const Invoices = () => {
                                         />
                                     </div>
                                     <DialogFooter>
-                                        <Button type="submit" disabled={createMutation.isPending}>
-                                            {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            Create & Send
+                                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                                            {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            {editingId ? "Update Invoice" : "Create & Send"}
                                         </Button>
                                     </DialogFooter>
                                 </div>
@@ -360,6 +422,17 @@ const Invoices = () => {
                                                             title="Refund Invoice"
                                                         >
                                                             <RotateCcw className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    {invoice.status !== 'paid' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-primary hover:text-primary hover:bg-primary/10"
+                                                            onClick={() => startEdit(invoice)}
+                                                            title="Edit Invoice"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
                                                         </Button>
                                                     )}
                                                     <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>

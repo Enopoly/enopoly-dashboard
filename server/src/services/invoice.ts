@@ -138,4 +138,50 @@ export class InvoiceService {
             [status, id]
         );
     }
+    /**
+     * Update invoice details
+     */
+    static async updateInvoice(id: number, data: CreateInvoiceDTO): Promise<Invoice> {
+        const db = getDatabase();
+
+        try {
+            // Update main invoice record
+            await db.execute(
+                `UPDATE invoices SET 
+                customer_email = ?,
+                customer_name = ?,
+                amount = ?,
+                processing_fee = ?,
+                description = ?,
+                updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?`,
+                [
+                    data.customer_email,
+                    data.customer_name,
+                    data.amount,
+                    data.processing_fee || 0,
+                    data.description || null,
+                    id
+                ]
+            );
+
+            // Update items: Delete old ones and re-insert new ones
+            await db.execute("DELETE FROM invoice_items WHERE invoice_id = ?", [id]);
+
+            if (data.items && data.items.length > 0) {
+                for (const item of data.items) {
+                    await db.execute(
+                        "INSERT INTO invoice_items (invoice_id, description, quantity, price) VALUES (?, ?, ?, ?)",
+                        [id, item.description, item.quantity, item.price]
+                    );
+                }
+            }
+
+            const invoice = await this.getInvoiceById(id);
+            return invoice;
+        } catch (error) {
+            logger.error("Error updating invoice", error);
+            throw error;
+        }
+    }
 }

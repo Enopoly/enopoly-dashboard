@@ -111,18 +111,38 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const { status } = req.body;
+    const { customer_email, customer_name, amount, description, currency, items, processing_fee, status } = req.body;
 
     if (isNaN(id)) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
     }
 
-    if (!status) {
-      throw new AppError(HttpStatus.BAD_REQUEST, "Status is required");
+    // If only status is provided, use the status update method (legacy support or quick status flip)
+    // But if other fields are present, do a full update
+    if (status && !amount && !customer_email) {
+      await InvoiceService.updateStatus(id, status);
+    } else {
+      // Full update
+      logger.info(`Updating invoice ${id} with payload:`, JSON.stringify(req.body));
+
+      if (!customer_email || !customer_name || !amount) {
+        logger.error(`Update failed: Missing fields. Email: ${customer_email}, Name: ${customer_name}, Amount: ${amount}`);
+        throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields for update");
+      }
+
+      await InvoiceService.updateInvoice(id, {
+        customer_email,
+        customer_name,
+        amount: parseFloat(amount),
+        processing_fee: processing_fee ? parseFloat(processing_fee) : 0,
+        description,
+        currency,
+        items,
+      });
     }
 
-    await InvoiceService.updateStatus(id, status);
     const updatedInvoice = await InvoiceService.getInvoiceById(id);
+    logger.info(`Invoice ${id} updated. New Amount in DB: ${updatedInvoice.amount}`);
 
     res.json({
       success: true,

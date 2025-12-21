@@ -121,6 +121,17 @@ export class AuthorizeNetService implements PaymentGateway {
     }
 
     async refund(transactionId: string, amount?: number): Promise<PaymentResult> {
+        // Intercept Test Mode transactions
+        if (transactionId.startsWith("TEST-TX-")) {
+            console.log(`[Mock Refund] simulating refund for test transaction: ${transactionId}`);
+            return Promise.resolve({
+                success: true,
+                transactionId: `REFUND-${Date.now()}`,
+                message: "Test Refund Successful (Mocked)",
+                rawResponse: { mocked: true }
+            });
+        }
+
         return new Promise(async (resolve) => {
             try {
                 // First, get the transaction details to retrieve card info and amount

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Upload, ExternalLink, Copy, Loader2 } from "lucide-react";
+import { Search, Filter, Upload, ExternalLink, Copy, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useData } from "@/contexts/DataContext";
 import { useState } from "react";
@@ -21,8 +21,19 @@ const getStatusColor = (status: string) => {
   }
 };
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchTransactions } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchTransactions, refundTransaction } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 const Transactions = () => {
   const { data: transactions = [], isLoading } = useQuery({
@@ -32,6 +43,27 @@ const Transactions = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [refundData, setRefundData] = useState<{ id: string, amount: string } | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const refundMutation = useMutation({
+    mutationFn: refundTransaction,
+    onSuccess: () => {
+      toast.success("Refund processed successfully");
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      setRefundData(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const handleRefund = () => {
+    if (refundData) {
+      refundMutation.mutate(refundData.id);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -166,7 +198,22 @@ const Transactions = () => {
                     <TableCell className="font-semibold">{transaction.amount}</TableCell>
                     <TableCell className="hidden sm:table-cell">{transaction.customer}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{transaction.date}</TableCell>
-                    <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`/invoice/${transaction.invoiceId}`, '_blank')}><ExternalLink className="w-4 h-4" /></Button></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {transaction.status === "succeeded" && (
+                          <Button
+                            variant="default" // Using default variant but stylized
+                            size="sm"
+                            className="bg-white hover:bg-red-50 text-red-600 border border-red-200 shadow-sm transition-all h-8 px-3"
+                            onClick={() => setRefundData({ id: transaction.id, amount: transaction.amount })}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                            Refund
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`/invoice/${transaction.invoiceId}`, '_blank')}><ExternalLink className="w-4 h-4" /></Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -174,6 +221,33 @@ const Transactions = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!refundData} onOpenChange={(open) => !open && setRefundData(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Process Refund</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to refund this transaction? This action cannot be undone.
+              {refundData && (
+                <div className="mt-2 p-3 bg-muted rounded-md font-mono text-sm">
+                  Transaction: {refundData.id}<br />
+                  Amount: {refundData.amount}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleRefund}
+              disabled={refundMutation.isPending}
+            >
+              {refundMutation.isPending ? "Processing..." : "Confirm Refund"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

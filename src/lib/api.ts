@@ -62,6 +62,17 @@ export const createInvoice = async (invoiceData: any): Promise<Invoice> => {
   return data.data;
 };
 
+export const updateInvoice = async (id: number, invoiceData: any): Promise<Invoice> => {
+  const response = await fetch(`${API_URL}/invoices/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(invoiceData),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data;
+};
+
 export const getInvoice = async (id: number): Promise<Invoice> => {
   const response = await fetch(`${API_URL}/invoices/${id}`);
   const data = await response.json();
