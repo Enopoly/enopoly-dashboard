@@ -320,4 +320,100 @@ export class AuthorizeNetService implements PaymentGateway {
             });
         });
     }
+
+    async getTransactionHistory(startDate: Date, endDate: Date): Promise<any[]> {
+        return new Promise((resolve, reject) => {
+            const request = new APIContracts.GetSettledBatchListRequest();
+            request.setMerchantAuthentication(this.merchantAuthenticationType);
+            request.setIncludeStatistics(true);
+
+            // Authorize.Net requires DateTime format (YYYY-MM-DDTHH:mm:ss)
+            const formatDateTime = (date: Date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}T00:00:00`;
+            };
+
+            request.setFirstSettlementDate(formatDateTime(startDate));
+            request.setLastSettlementDate(formatDateTime(endDate));
+
+            const ctrl = new APIControllers.GetSettledBatchListController(request.getJSON());
+
+            if (this.environment === 'PRODUCTION') {
+                ctrl.setEnvironment("https://api2.authorize.net/xml/v1/request.api");
+            } else {
+                ctrl.setEnvironment("https://apitest.authorize.net/xml/v1/request.api");
+            }
+
+            ctrl.execute(() => {
+                const apiResponse = ctrl.getResponse();
+                const response = new APIContracts.GetSettledBatchListResponse(apiResponse);
+
+                if (response != null && response.getMessages().getResultCode() == APIContracts.MessageTypeEnum.OK) {
+                    const batches = response.getBatchList()?.getBatch() || [];
+
+                    if (batches.length === 0) {
+                        resolve([]);
+                        return;
+                    }
+
+                    // Fetch transactions for each batch
+                    const allTransactions: any[] = [];
+                    let processedBatches = 0;
+
+                    batches.forEach((batch: any) => {
+                        const batchId = batch.getBatchId();
+
+                        const txnRequest = new APIContracts.GetTransactionListRequest();
+                        txnRequest.setMerchantAuthentication(this.merchantAuthenticationType);
+                        txnRequest.setBatchId(batchId);
+
+                        const txnCtrl = new APIControllers.GetTransactionListController(txnRequest.getJSON());
+
+                        if (this.environment === 'PRODUCTION') {
+                            txnCtrl.setEnvironment("https://api2.authorize.net/xml/v1/request.api");
+                        } else {
+                            txnCtrl.setEnvironment("https://apitest.authorize.net/xml/v1/request.api");
+                        }
+
+                        txnCtrl.execute(() => {
+                            const txnApiResponse = txnCtrl.getResponse();
+                            const txnResponse = new APIContracts.GetTransactionListResponse(txnApiResponse);
+
+                            if (txnResponse != null && txnResponse.getMessages().getResultCode() == APIContracts.MessageTypeEnum.OK) {
+                                const transactions = txnResponse.getTransactions()?.getTransaction() || [];
+
+                                transactions.forEach((txn: any) => {
+                                    allTransactions.push({
+                                        transactionId: txn.getTransId(),
+                                        submitTime: txn.getSubmitTimeUTC(),
+                                        transactionStatus: txn.getTransactionStatus(),
+                                        invoiceNumber: txn.getInvoiceNumber(),
+                                        firstName: txn.getFirstName(),
+                                        lastName: txn.getLastName(),
+                                        accountNumber: txn.getAccountNumber(),
+                                        accountType: txn.getAccountType(),
+                                        settleAmount: parseFloat(txn.getSettleAmount()),
+                                        batchId: batchId
+                                    });
+                                });
+                            }
+
+                            processedBatches++;
+                            if (processedBatches === batches.length) {
+                                resolve(allTransactions);
+                            }
+                        });
+                    });
+                } else {
+                    const errorMessage = response?.getMessages()?.getMessage()[0]?.getText() || "Failed to fetch transaction history";
+                    const errorCode = response?.getMessages()?.getMessage()[0]?.getCode();
+                    console.error(`[AuthNet History Error] Code: ${errorCode}, Message: ${errorMessage}`);
+                    console.error(`[AuthNet History Error] Full Response:`, JSON.stringify(response, null, 2));
+                    reject(new Error(`${errorCode}: ${errorMessage}`));
+                }
+            });
+        });
+    }
 }

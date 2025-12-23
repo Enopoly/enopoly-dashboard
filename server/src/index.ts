@@ -12,6 +12,8 @@ dotenv.config();
 import invoicesRouter from "./routes/invoices";
 import paymentsRouter from "./routes/payments";
 import transactionsRouter from "./routes/transactions";
+import authorizenetRouter from "./routes/authorizenet";
+import reconciliationRouter from "./routes/reconciliation";
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -57,6 +59,8 @@ app.get("/api/health", (_req: Request, res: Response) => {
 app.use("/api/invoices", invoicesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/transactions", transactionsRouter);
+app.use("/api/authorizenet", authorizenetRouter);
+app.use("/api/reconciliation", reconciliationRouter);
 
 // 404 handler
 app.use((req: Request, _res: Response, next: NextFunction) => {
