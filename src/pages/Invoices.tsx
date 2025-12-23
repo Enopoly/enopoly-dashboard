@@ -23,7 +23,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw, Pencil, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -137,7 +137,9 @@ const Invoices = () => {
                 price: Number(i.price) || 0
             })));
         } else {
-            setItems([{ description: "Service Charge", quantity: 1, price: Number(invoice.amount) || 0 }]);
+            // Fallback: Calculate subtotal by removing the processing fee
+            const subtotal = Number(invoice.amount) - Number(invoice.processing_fee || 0);
+            setItems([{ description: invoice.description || "Service", quantity: 1, price: subtotal }]);
         }
 
         // Handle fee logic (reverse engineering if possible, or just reset)
@@ -417,6 +419,17 @@ const Invoices = () => {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    {invoice.status === 'paid' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-success hover:text-success hover:bg-success/10"
+                                                            onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
+                                                            title="Download PDF"
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                     {invoice.status === 'paid' && invoice.authorizenet_transaction_id && (
                                                         <Button
                                                             variant="ghost"
@@ -429,18 +442,29 @@ const Invoices = () => {
                                                         </Button>
                                                     )}
                                                     {invoice.status !== 'paid' && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-primary hover:text-primary hover:bg-primary/10"
-                                                            onClick={() => startEdit(invoice)}
-                                                            title="Edit Invoice"
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
+                                                        <>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-info hover:text-info hover:bg-info/10"
+                                                                onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
+                                                                title="Preview PDF"
+                                                            >
+                                                                <ExternalLink className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-primary hover:text-primary hover:bg-primary/10"
+                                                                onClick={() => startEdit(invoice)}
+                                                                title="Edit Invoice"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
                                                     )}
-                                                    <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>
-                                                        <ExternalLink className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')} title="View Payment Page">
+                                                        <Copy className="h-4 w-4" />
                                                     </Button>
                                                 </div>
                                             </TableCell>

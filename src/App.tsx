@@ -10,6 +10,7 @@ import { Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import Transactions from "./pages/Transactions";
+import Reconciliation from "./pages/Reconciliation";
 import Payouts from "./pages/Payouts";
 import APIKeys from "./pages/APIKeys";
 import Webhooks from "./pages/Webhooks";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route index element={<Dashboard />} />
                 <Route path="transactions" element={<Transactions />} />
+                <Route path="reconciliation" element={<Reconciliation />} />
                 <Route path="invoices" element={<Invoices />} />
                 <Route path="payouts" element={<Payouts />} />
                 <Route path="api-keys" element={<APIKeys />} />
