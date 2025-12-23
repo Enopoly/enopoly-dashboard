@@ -172,6 +172,20 @@ export class PdfService {
         const valX = 470;
 
         doc.font("Helvetica-Bold");
+
+        // Subtotal
+        doc.text("Subtotal:", totalX, currentPosition, { width: 80, align: "right" });
+        doc.text(this.formatCurrency(subtotal, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
+        currentPosition += 15;
+
+        // Processing Fee
+        if (invoice.processing_fee > 0) {
+            doc.text("Processing Fee:", totalX, currentPosition, { width: 80, align: "right" });
+            doc.text(this.formatCurrency(invoice.processing_fee, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
+            currentPosition += 15;
+        }
+
+        // Total
         doc.text("Total:", totalX, currentPosition, { width: 80, align: "right" });
         doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
 

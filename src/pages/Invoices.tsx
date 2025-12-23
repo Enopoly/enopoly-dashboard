@@ -56,7 +56,7 @@ const Invoices = () => {
 
     // Calculate totals
     const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const fee = autoFee ? Number((subtotal * 0.03).toFixed(2)) : (parseFloat(customFee) || 0);
+    const fee = autoFee ? Number((subtotal * 0.035).toFixed(2)) : (parseFloat(customFee) || 0);
     const totalAmount = subtotal + fee;
 
     const addItem = () => {
@@ -325,7 +325,7 @@ const Invoices = () => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-2">
                                             <Switch id="auto-fee" checked={autoFee} onCheckedChange={setAutoFee} />
-                                            <Label htmlFor="auto-fee">Auto-calculate 3% Fee</Label>
+                                            <Label htmlFor="auto-fee">Auto-calculate 3.5% Fee</Label>
                                         </div>
                                         <div className="relative w-32">
                                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
