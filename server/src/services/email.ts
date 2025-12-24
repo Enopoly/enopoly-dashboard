@@ -56,7 +56,7 @@ export class EmailService {
             invoice_number: data.invoiceNumber,
             company_name: companyName,
             amount: typeof data.amount === 'number'
-                ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.amount)
+                ? new Intl.NumberFormat('en-US', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data.amount)
                 : data.amount,
             year: new Date().getFullYear(),
             // Custom fields depending on type
