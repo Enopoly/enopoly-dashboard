@@ -83,7 +83,7 @@ export default function InvoiceView() {
                                         className="gap-2 border-primary/20 hover:bg-primary/5 text-primary"
                                     >
                                         <Eye className="w-4 h-4" />
-                                        View Bill
+                                        View Invoice
                                     </Button>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                                         }`}>

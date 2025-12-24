@@ -67,9 +67,9 @@ export class PdfService {
             .fillColor("#000000")
             .text(invoice.customer_name, 50, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 50, top + 30)
+            .text(invoice.customer_email, 50, top + 30, { width: 190 })
             // Placeholder address if not in DB, matching style
-            .text("United States", 50, top + 45);
+            .text("United States", 50, doc.y);
 
         // SHIP TO (Mirroring Bill To for now as we don't have separate ship addr)
         doc
@@ -80,8 +80,8 @@ export class PdfService {
             .fillColor("#000000")
             .text(invoice.customer_name, 250, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 250, top + 30)
-            .text("United States", 250, top + 45);
+            .text(invoice.customer_email, 250, top + 30, { width: 190 })
+            .text("United States", 250, doc.y);
     }
 
     private static generateOrderDetails(doc: PDFKit.PDFDocument, invoice: Invoice) {
