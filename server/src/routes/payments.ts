@@ -30,7 +30,10 @@ router.post("/charge", async (req, res) => {
     }
 
     // Fetch invoice to get customer email (Async)
-    const invoice = await db.get<{ customer_email: string }>("SELECT customer_email FROM invoices WHERE id = ?", [invoiceId]);
+    const invoice = await db.get<{ customer_email: string; customer_name: string; invoice_number: string }>(
+      "SELECT customer_email, customer_name, invoice_number FROM invoices WHERE id = ?",
+      [invoiceId]
+    );
 
     if (invoice && invoice.customer_email) {
       cardData.email = invoice.customer_email;
@@ -90,9 +93,9 @@ router.post("/charge", async (req, res) => {
         EmailService.sendReceiptEmail(
           invoice.customer_email,
           amount,
-          'Customer', // Ideally we fetch customer name too from invoice join
-          `INV-${invoiceId}`, // Fallback if we don't have full object
-          result.transactionId || "UNKNOWN" || "UNKNOWN"
+          invoice.customer_name || 'Customer',
+          invoice.invoice_number || `INV-${invoiceId}`,
+          result.transactionId || "UNKNOWN"
         ).catch(err => logger.error("Failed to send receipt email", err));
       }
 

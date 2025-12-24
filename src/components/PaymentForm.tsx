@@ -148,7 +148,18 @@ export function PaymentForm({ invoiceId, amount, onSuccess }: PaymentFormProps) 
                                 <FormItem>
                                     <FormLabel>Expiration (MM/YY)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="MM/YY" {...field} maxLength={5} />
+                                        <Input
+                                            placeholder="MM/YY"
+                                            {...field}
+                                            maxLength={5}
+                                            onChange={(e) => {
+                                                let value = e.target.value.replace(/\D/g, '');
+                                                if (value.length >= 3) {
+                                                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                                                }
+                                                field.onChange(value);
+                                            }}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
