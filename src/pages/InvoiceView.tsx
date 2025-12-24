@@ -124,8 +124,8 @@ export default function InvoiceView() {
                                                         <tr key={i}>
                                                             <td className="p-3">{item.description}</td>
                                                             <td className="p-3 text-right">{Number(item.quantity)}</td>
-                                                            <td className="p-3 text-right">${Number(item.price).toFixed(2)}</td>
-                                                            <td className="p-3 text-right">${(Number(item.quantity) * Number(item.price)).toFixed(2)}</td>
+                                                            <td className="p-3 text-right">${Number(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                            <td className="p-3 text-right">${(Number(item.quantity) * Number(item.price)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -140,18 +140,18 @@ export default function InvoiceView() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">Subtotal</span>
-                                            <span>${(invoice.amount - (invoice.processing_fee || 0)).toFixed(2)}</span>
+                                            <span>${(invoice.amount - (invoice.processing_fee || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         {invoice.processing_fee && invoice.processing_fee > 0 ? (
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Processing Fee</span>
-                                                <span>${invoice.processing_fee.toFixed(2)}</span>
+                                                <span>${invoice.processing_fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
                                         ) : null}
                                         <Separator />
                                         <div className="flex justify-between font-bold text-lg">
                                             <span>Total Due</span>
-                                            <span>${invoice.amount.toFixed(2)}</span>
+                                            <span>${invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                 </CardContent>
