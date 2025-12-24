@@ -42,6 +42,16 @@ export async function runMigrations(): Promise<void> {
       // Column likely exists
     }
 
+    // Manual migration for invoice_items name
+    try {
+      await db.exec("ALTER TABLE invoice_items ADD COLUMN name TEXT");
+      // Optional: Copy description to name for existing items to preserve data
+      await db.exec("UPDATE invoice_items SET name = description WHERE name IS NULL");
+      logger.info("Added name column to invoice_items");
+    } catch (e) {
+      // Column likely exists
+    }
+
     logger.info("Database migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);

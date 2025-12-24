@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchInvoices, createInvoice, refundTransaction, updateInvoice } from "@/lib/api";
+import { fetchInvoices, createInvoice, refundTransaction, updateInvoice, deleteInvoice } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ const Invoices = () => {
         customer_name: "",
         customer_email: "",
         customer_address: "",
-        description: "",
+        // Description removed as per request
     });
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -70,7 +70,7 @@ const Invoices = () => {
     const totalAmount = subtotal + fee;
 
     const addItem = () => {
-        setItems([...items, { description: "", quantity: 1, price: 0 }]);
+        setItems([...items, { name: "", description: "", quantity: 1, price: 0 }]);
     };
 
     const removeItem = (index: number) => {
@@ -103,8 +103,9 @@ const Invoices = () => {
                 });
             }
             setIsOpen(false);
-            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
-            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setIsOpen(false);
+            setFormData({ customer_name: "", customer_email: "", customer_address: "" });
+            setItems([{ name: "", description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -120,8 +121,9 @@ const Invoices = () => {
             toast.success("Invoice updated successfully!");
             setIsOpen(false);
             setEditingId(null);
-            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
-            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setEditingId(null);
+            setFormData({ customer_name: "", customer_email: "", customer_address: "" });
+            setItems([{ name: "", description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -131,18 +133,32 @@ const Invoices = () => {
         },
     });
 
+    // Delete Invoice Mutation
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const deleteMutation = useMutation({
+        mutationFn: deleteInvoice,
+        onSuccess: () => {
+            toast.success("Invoice deleted successfully");
+            setDeleteId(null);
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to delete invoice");
+        }
+    });
+
     const startEdit = (invoice: any) => {
         setEditingId(invoice.id);
         setFormData({
             customer_name: invoice.customer_name,
             customer_email: invoice.customer_email,
             customer_address: invoice.customer_address || "",
-            description: invoice.description || "",
         });
 
         // Map items or default to one
         if (invoice.items && invoice.items.length > 0) {
             setItems(invoice.items.map((i: any) => ({
+                name: i.name || "",
                 description: i.description,
                 quantity: Number(i.quantity) || 1,
                 price: Number(i.price) || 0
@@ -150,7 +166,7 @@ const Invoices = () => {
         } else {
             // Fallback: Calculate subtotal by removing the processing fee
             const subtotal = Number(invoice.amount) - Number(invoice.processing_fee || 0);
-            setItems([{ description: invoice.description || "Service", quantity: 1, price: subtotal }]);
+            setItems([{ name: "Service", description: invoice.description || "", quantity: 1, price: subtotal }]);
         }
 
         // Handle fee logic (reverse engineering if possible, or just reset)
@@ -164,8 +180,9 @@ const Invoices = () => {
     const handleOpenChange = (open: boolean) => {
         if (!open) {
             setEditingId(null);
-            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
-            setItems([{ description: "", quantity: 1, price: 0 }]);
+            setEditingId(null);
+            setFormData({ customer_name: "", customer_email: "", customer_address: "" });
+            setItems([{ name: "", description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
         }
@@ -244,34 +261,36 @@ const Invoices = () => {
                                 <Plus className="mr-2 h-4 w-4" /> Create Invoice
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-h-[85vh] overflow-y-auto">
+                        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>{editingId ? "Edit Invoice" : "Create New Invoice"}</DialogTitle>
                                 <DialogDescription>
                                     {editingId ? "Update the invoice details below." : "Enter the invoice details below. An email will be sent to the customer automatically."}
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="customer_name">Customer Name</Label>
-                                    <Input
-                                        id="customer_name"
-                                        placeholder="e.g. John Doe"
-                                        value={formData.customer_name}
-                                        onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="customer_email">Customer Email</Label>
-                                    <Input
-                                        id="customer_email"
-                                        type="email"
-                                        placeholder="john@example.com"
-                                        value={formData.customer_email}
-                                        onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
-                                        required
-                                    />
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="customer_name">Customer Name</Label>
+                                        <Input
+                                            id="customer_name"
+                                            placeholder="e.g. John Doe"
+                                            value={formData.customer_name}
+                                            onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="customer_email">Customer Email</Label>
+                                        <Input
+                                            id="customer_email"
+                                            type="email"
+                                            placeholder="john@example.com"
+                                            value={formData.customer_email}
+                                            onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="customer_address">Customer Address</Label>
@@ -284,50 +303,65 @@ const Invoices = () => {
                                 </div>
                                 <Label>Line Items</Label>
                                 <div className="border rounded-md overflow-hidden">
-                                    <div className="grid grid-cols-12 gap-2 bg-muted p-2 text-xs font-medium">
-                                        <div className="col-span-6">Description</div>
+                                    <div className="hidden md:grid grid-cols-12 gap-4 bg-muted/50 p-3 text-sm font-medium">
+                                        <div className="col-span-3">Item Name</div>
+                                        <div className="col-span-4">Description</div>
                                         <div className="col-span-2">Qty</div>
-                                        <div className="col-span-3">Price</div>
+                                        <div className="col-span-2">Price</div>
                                         <div className="col-span-1"></div>
                                     </div>
-                                    <div className="p-2 space-y-2">
+                                    <div className="p-3 space-y-3">
                                         {items.map((item, index) => (
-                                            <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                                                <div className="col-span-6">
+                                            <div key={index} className="grid grid-cols-12 gap-4 items-start border-b md:border-0 pb-4 md:pb-0">
+                                                <div className="col-span-12 md:col-span-3">
+                                                    <Label className="md:hidden text-xs text-muted-foreground mb-1 block">Item Name</Label>
                                                     <Input
-                                                        placeholder="Item name"
+                                                        placeholder="Item Name"
+                                                        value={item.name || ""}
+                                                        onChange={(e) => updateItem(index, 'name', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="col-span-12 md:col-span-4">
+                                                    <Label className="md:hidden text-xs text-muted-foreground mb-1 block">Description</Label>
+                                                    <Textarea
+                                                        placeholder="Description"
+                                                        className="min-h-[40px] resize-y"
                                                         value={item.description}
                                                         onChange={(e) => updateItem(index, 'description', e.target.value)}
                                                         required
                                                     />
                                                 </div>
-                                                <div className="col-span-2">
+                                                <div className="col-span-5 md:col-span-2">
+                                                    <Label className="md:hidden text-xs text-muted-foreground mb-1 block">Qty</Label>
                                                     <Input
                                                         type="number"
                                                         min="1"
+                                                        placeholder="Qty"
                                                         value={item.quantity || ''}
                                                         onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value))}
                                                         className="px-2"
                                                     />
                                                 </div>
-                                                <div className="col-span-3">
+                                                <div className="col-span-5 md:col-span-2">
+                                                    <Label className="md:hidden text-xs text-muted-foreground mb-1 block">Price</Label>
                                                     <div className="relative">
-                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                                                         <Input
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
+                                                            placeholder="0.00"
                                                             value={item.price || ''}
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
                                                                 updateItem(index, 'price', val === '' ? '' : parseFloat(val));
                                                             }}
                                                             onFocus={(e) => e.target.select()}
-                                                            className="pl-7 px-4"
+                                                            className="pl-7"
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="col-span-1 text-center">
+                                                <div className="col-span-2 md:col-span-1 text-center pt-1 md:pt-1 text-right md:text-center mt-6 md:mt-0">
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
@@ -368,21 +402,13 @@ const Invoices = () => {
 
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Subtotal:</span>
-                                        <span>${subtotal.toFixed(2)}</span>
+                                        <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between font-bold text-lg">
                                         <span>Total:</span>
-                                        <span>${totalAmount.toFixed(2)}</span>
+                                        <span>${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="description">Description (Optional)</Label>
-                                        <Input
-                                            id="description"
-                                            placeholder="Services rendered..."
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        />
-                                    </div>
+                                    {/* Global Description Removed */}
                                     <DialogFooter>
                                         <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                                             {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -495,6 +521,14 @@ const Invoices = () => {
                                                                 </DropdownMenuItem>
                                                             </>
                                                         )}
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => setDeleteId(invoice.id)}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -523,6 +557,26 @@ const Invoices = () => {
                         >
                             {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Confirm Refund
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete this invoice and all its local data. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

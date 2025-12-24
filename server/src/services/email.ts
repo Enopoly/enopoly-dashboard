@@ -55,7 +55,9 @@ export class EmailService {
             customer_name: data.customerName,
             invoice_number: data.invoiceNumber,
             company_name: companyName,
-            amount: typeof data.amount === 'number' ? data.amount.toFixed(2) : data.amount,
+            amount: typeof data.amount === 'number'
+                ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.amount)
+                : data.amount,
             year: new Date().getFullYear(),
             // Custom fields depending on type
             type: type

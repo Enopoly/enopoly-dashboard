@@ -156,4 +156,17 @@ router.put("/:id", async (req, res, next) => {
   }
 });
 
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
+    }
+    await InvoiceService.deleteInvoice(id);
+    res.status(HttpStatus.OK).json({ success: true, message: "Invoice deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

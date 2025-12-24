@@ -24,6 +24,7 @@ export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002/ap
 
 export interface InvoiceItem {
   id?: number;
+  name?: string;
   description: string;
   quantity: number | string;
   price: number | string;
@@ -119,4 +120,12 @@ export const fetchReconciliation = async (startDate?: string, endDate?: string) 
   const data = await response.json();
   if (!data.success) throw new Error(data.message);
   return data;
+};
+
+export const deleteInvoice = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/invoices/${id}`, {
+    method: "DELETE",
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message);
 };

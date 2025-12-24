@@ -156,8 +156,9 @@ export class PdfService {
                 const amount = item.price * item.quantity;
                 subtotal += amount;
 
-                // Item Code/Desc
-                doc.font("Helvetica-Bold").text("ITEM", 60, currentPosition); // Placeholder code
+                // Item Name (Bold)
+                doc.font("Helvetica-Bold").text(item.name || "Item", 60, currentPosition);
+                // Description (Normal)
                 doc.font("Helvetica").text(item.description, 60, currentPosition + 12, { width: 220 });
 
                 doc.text(item.quantity.toString(), 300, currentPosition + 5, { width: 50, align: "center" });

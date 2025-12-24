@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 export interface InvoiceItem {
     id: number;
     invoice_id: number;
+    name?: string;
     description: string;
     quantity: number;
     price: number;
@@ -27,6 +28,7 @@ export interface Invoice {
 }
 
 export interface InvoiceItemDTO {
+    name?: string;
     description: string;
     quantity: number;
     price: number;
@@ -90,8 +92,8 @@ export class InvoiceService {
             if (data.items && data.items.length > 0) {
                 for (const item of data.items) {
                     await db.execute(
-                        "INSERT INTO invoice_items (invoice_id, description, quantity, price) VALUES (?, ?, ?, ?)",
-                        [invoiceId, item.description, item.quantity, item.price]
+                        "INSERT INTO invoice_items (invoice_id, name, description, quantity, price) VALUES (?, ?, ?, ?, ?)",
+                        [invoiceId, item.name || item.description, item.description, item.quantity, item.price]
                     );
                 }
             }
@@ -184,8 +186,8 @@ export class InvoiceService {
             if (data.items && data.items.length > 0) {
                 for (const item of data.items) {
                     await db.execute(
-                        "INSERT INTO invoice_items (invoice_id, description, quantity, price) VALUES (?, ?, ?, ?)",
-                        [id, item.description, item.quantity, item.price]
+                        "INSERT INTO invoice_items (invoice_id, name, description, quantity, price) VALUES (?, ?, ?, ?, ?)",
+                        [id, item.name || item.description, item.description, item.quantity, item.price]
                     );
                 }
             }
@@ -194,6 +196,17 @@ export class InvoiceService {
             return invoice;
         } catch (error) {
             logger.error("Error updating invoice", error);
+            throw error;
+        }
+    }
+    static async deleteInvoice(id: number): Promise<void> {
+        const db = getDatabase();
+
+        try {
+            await db.execute("DELETE FROM invoice_items WHERE invoice_id = ?", [id]);
+            await db.execute("DELETE FROM invoices WHERE id = ?", [id]);
+        } catch (error) {
+            logger.error("Error deleting invoice", error);
             throw error;
         }
     }
