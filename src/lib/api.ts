@@ -25,8 +25,8 @@ export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002/ap
 export interface InvoiceItem {
   id?: number;
   description: string;
-  quantity: number;
-  price: number;
+  quantity: number | string;
+  price: number | string;
 }
 
 export interface Invoice {
@@ -112,7 +112,7 @@ export const fetchReconciliation = async (startDate?: string, endDate?: string) 
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
-  
+
   const response = await fetch(`${API_URL}/reconciliation?${params.toString()}`);
   const data = await response.json();
   if (!data.success) throw new Error(data.message);

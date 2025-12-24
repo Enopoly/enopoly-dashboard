@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, Download, Eye } from "lucide-react";
 import { PaymentForm } from "@/components/PaymentForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -76,10 +76,20 @@ export default function InvoiceView() {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h1 className="text-2xl font-bold tracking-tight text-gray-900">Invoice {invoice.invoice_number}</h1>
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                    {invoice.status.toUpperCase()}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
+                                        className="gap-2 border-primary/20 hover:bg-primary/5 text-primary"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                        View Bill
+                                    </Button>
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {invoice.status.toUpperCase()}
+                                    </span>
+                                </div>
                             </div>
 
                             <Card>
@@ -113,9 +123,9 @@ export default function InvoiceView() {
                                                     {invoice.items.map((item, i) => (
                                                         <tr key={i}>
                                                             <td className="p-3">{item.description}</td>
-                                                            <td className="p-3 text-right">{item.quantity}</td>
-                                                            <td className="p-3 text-right">${item.price.toFixed(2)}</td>
-                                                            <td className="p-3 text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                                                            <td className="p-3 text-right">{Number(item.quantity)}</td>
+                                                            <td className="p-3 text-right">${Number(item.price).toFixed(2)}</td>
+                                                            <td className="p-3 text-right">${(Number(item.quantity) * Number(item.price)).toFixed(2)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

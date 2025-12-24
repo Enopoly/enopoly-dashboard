@@ -23,7 +23,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw, Pencil, Download } from "lucide-react";
+import { Plus, Loader2, Copy, ExternalLink, RefreshCw, Trash2, RotateCcw, Pencil, Download, MoreHorizontal, Eye, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -36,6 +36,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { InvoiceItem } from "@/lib/api";
 
 const Invoices = () => {
@@ -55,7 +63,7 @@ const Invoices = () => {
     const [editingId, setEditingId] = useState<number | null>(null);
 
     // Calculate totals
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.price)), 0);
     const fee = autoFee ? Number((subtotal * 0.035).toFixed(2)) : (parseFloat(customFee) || 0);
     const totalAmount = subtotal + fee;
 
@@ -177,7 +185,7 @@ const Invoices = () => {
         e.preventDefault();
 
         // Validate items
-        const validItems = items.filter(i => i.description && i.price > 0);
+        const validItems = items.filter(i => i.description && Number(i.price) > 0);
         if (validItems.length === 0) {
             toast.error("Please add at least one valid item");
             return;
@@ -193,7 +201,11 @@ const Invoices = () => {
             amount: totalAmount,
             processing_fee: fee,
             currency: "USD",
-            items: validItems,
+            items: validItems.map(i => ({
+                ...i,
+                quantity: Number(i.quantity) || 0,
+                price: Number(i.price) || 0
+            })),
         };
 
         if (editingId) {
@@ -281,8 +293,8 @@ const Invoices = () => {
                                                     <Input
                                                         type="number"
                                                         min="1"
-                                                        value={item.quantity}
-                                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                                                        value={item.quantity || ''}
+                                                        onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value))}
                                                         className="px-2"
                                                     />
                                                 </div>
@@ -293,10 +305,10 @@ const Invoices = () => {
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
-                                                            value={item.price}
+                                                            value={item.price || ''}
                                                             onChange={(e) => {
-                                                                const val = parseFloat(e.target.value);
-                                                                updateItem(index, 'price', isNaN(val) ? 0 : val);
+                                                                const val = e.target.value;
+                                                                updateItem(index, 'price', val === '' ? '' : parseFloat(val));
                                                             }}
                                                             onFocus={(e) => e.target.select()}
                                                             className="pl-7 px-4"
@@ -418,55 +430,61 @@ const Invoices = () => {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {invoice.status === 'paid' && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-success hover:text-success hover:bg-success/10"
-                                                            onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
-                                                            title="Download PDF"
-                                                        >
-                                                            <Download className="h-4 w-4" />
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
-                                                    )}
-                                                    {invoice.status === 'paid' && invoice.authorizenet_transaction_id && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                            onClick={() => setRefundTxId(invoice.authorizenet_transaction_id!)}
-                                                            title="Refund Invoice"
-                                                        >
-                                                            <RotateCcw className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                    {invoice.status !== 'paid' && (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="text-info hover:text-info hover:bg-info/10"
-                                                                onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
-                                                                title="Preview PDF"
-                                                            >
-                                                                <ExternalLink className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="text-primary hover:text-primary hover:bg-primary/10"
-                                                                onClick={() => startEdit(invoice)}
-                                                                title="Edit Invoice"
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    <Button variant="ghost" size="icon" onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')} title="View Payment Page">
-                                                        <Copy className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(invoice.invoice_number)}>
+                                                            <Copy className="mr-2 h-4 w-4" />
+                                                            Copy Invoice #
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+
+                                                        {invoice.status !== 'paid' && (
+                                                            <DropdownMenuItem onClick={() => startEdit(invoice)}>
+                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                        )}
+
+                                                        <DropdownMenuItem onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}>
+                                                            {invoice.status === 'paid' ? (
+                                                                <>
+                                                                    <Download className="mr-2 h-4 w-4" />
+                                                                    Download PDF
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    Preview PDF
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuItem>
+
+                                                        <DropdownMenuItem onClick={() => window.open(`/invoice/${invoice.id}`, '_blank')}>
+                                                            <CreditCard className="mr-2 h-4 w-4" />
+                                                            View Payment Page
+                                                        </DropdownMenuItem>
+
+                                                        {invoice.status === 'paid' && invoice.authorizenet_transaction_id && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setRefundTxId(invoice.authorizenet_transaction_id!)}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                >
+                                                                    <RotateCcw className="mr-2 h-4 w-4" />
+                                                                    Refund Invoice
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))
