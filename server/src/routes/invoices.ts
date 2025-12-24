@@ -66,7 +66,7 @@ router.get("/:id/pdf", async (req, res, next) => {
 // POST /api/invoices - Create new invoice
 router.post("/", async (req, res, next) => {
   try {
-    const { customer_email, customer_name, amount, description, currency, items, processing_fee } = req.body;
+    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee } = req.body;
 
     if (!customer_email || !customer_name || !amount) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields");
@@ -75,6 +75,7 @@ router.post("/", async (req, res, next) => {
     const invoice = await InvoiceService.createInvoice({
       customer_email,
       customer_name,
+      customer_address,
       amount: parseFloat(amount),
       processing_fee: processing_fee ? parseFloat(processing_fee) : 0,
       description,
@@ -111,7 +112,7 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const { customer_email, customer_name, amount, description, currency, items, processing_fee, status } = req.body;
+    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee, status } = req.body;
 
     if (isNaN(id)) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
@@ -133,6 +134,7 @@ router.put("/:id", async (req, res, next) => {
       await InvoiceService.updateInvoice(id, {
         customer_email,
         customer_name,
+        customer_address,
         amount: parseFloat(amount),
         processing_fee: processing_fee ? parseFloat(processing_fee) : 0,
         description,

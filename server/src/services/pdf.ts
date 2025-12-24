@@ -67,9 +67,11 @@ export class PdfService {
             .fillColor("#000000")
             .text(invoice.customer_name, 50, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 50, top + 30, { width: 155 })
-            // Placeholder address if not in DB, matching style
-            .text("United States", 50, doc.y);
+            .text(invoice.customer_email, 50, top + 30, { width: 155 });
+
+        if (invoice.customer_address) {
+            doc.text(invoice.customer_address, 50, doc.y, { width: 155 });
+        }
 
         // SHIP TO
         doc
@@ -80,8 +82,11 @@ export class PdfService {
             .fillColor("#000000")
             .text(invoice.customer_name, 215, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 215, top + 30, { width: 155 })
-            .text("United States", 215, doc.y);
+            .text(invoice.customer_email, 215, top + 30, { width: 155 });
+
+        if (invoice.customer_address) {
+            doc.text(invoice.customer_address, 215, doc.y, { width: 155 });
+        }
     }
 
     private static generateOrderDetails(doc: PDFKit.PDFDocument, invoice: Invoice) {

@@ -34,8 +34,10 @@ export interface Invoice {
   invoice_number: string;
   customer_email: string;
   customer_name: string;
+  customer_address?: string;
   amount: number;
   processing_fee?: number;
+  authorizenet_transaction_id?: string;
   currency: string;
   status: "pending" | "paid" | "refunded" | "voided";
   description?: string;

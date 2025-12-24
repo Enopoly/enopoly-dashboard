@@ -4,6 +4,7 @@ import { fetchInvoices, createInvoice, refundTransaction, updateInvoice } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";  // Added Textarea import
 import { Label } from "@/components/ui/label";
 import {
     Table,
@@ -58,6 +59,7 @@ const Invoices = () => {
     const [formData, setFormData] = useState({
         customer_name: "",
         customer_email: "",
+        customer_address: "",
         description: "",
     });
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -101,7 +103,7 @@ const Invoices = () => {
                 });
             }
             setIsOpen(false);
-            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
             setItems([{ description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
@@ -118,7 +120,7 @@ const Invoices = () => {
             toast.success("Invoice updated successfully!");
             setIsOpen(false);
             setEditingId(null);
-            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
             setItems([{ description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
@@ -134,6 +136,7 @@ const Invoices = () => {
         setFormData({
             customer_name: invoice.customer_name,
             customer_email: invoice.customer_email,
+            customer_address: invoice.customer_address || "",
             description: invoice.description || "",
         });
 
@@ -161,7 +164,7 @@ const Invoices = () => {
     const handleOpenChange = (open: boolean) => {
         if (!open) {
             setEditingId(null);
-            setFormData({ customer_name: "", customer_email: "", description: "" });
+            setFormData({ customer_name: "", customer_email: "", customer_address: "", description: "" });
             setItems([{ description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
@@ -268,6 +271,15 @@ const Invoices = () => {
                                         value={formData.customer_email}
                                         onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
                                         required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="customer_address">Customer Address</Label>
+                                    <Textarea
+                                        id="customer_address"
+                                        placeholder="123 Main St, City, State ZIP"
+                                        value={formData.customer_address}
+                                        onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
                                     />
                                 </div>
                                 <Label>Line Items</Label>

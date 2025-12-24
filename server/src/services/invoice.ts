@@ -14,6 +14,7 @@ export interface Invoice {
     invoice_number: string;
     customer_email: string;
     customer_name: string;
+    customer_address?: string;
     amount: number;
     processing_fee: number;
     currency: string;
@@ -34,6 +35,7 @@ export interface InvoiceItemDTO {
 export interface CreateInvoiceDTO {
     customer_email: string;
     customer_name: string;
+    customer_address?: string;
     amount: number;
     processing_fee?: number;
     description?: string;
@@ -65,9 +67,9 @@ export class InvoiceService {
         try {
             const sql = `
         INSERT INTO invoices (
-          invoice_number, customer_email, customer_name, amount, processing_fee, currency, description, status
+          invoice_number, customer_email, customer_name, customer_address, amount, processing_fee, currency, description, status
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, 'pending'
+          ?, ?, ?, ?, ?, ?, ?, ?, 'pending'
         )
       `;
 
@@ -75,6 +77,7 @@ export class InvoiceService {
                 invoiceNumber,
                 data.customer_email,
                 data.customer_name,
+                data.customer_address || null,
                 data.amount,
                 data.processing_fee || 0,
                 data.currency || "USD",
@@ -126,6 +129,13 @@ export class InvoiceService {
     static async getAllInvoices(): Promise<Invoice[]> {
         const db = getDatabase();
         const invoices = await db.query<Invoice>("SELECT * FROM invoices ORDER BY created_at DESC");
+
+        // Fetch items for each invoice (to ensure Edit works correctly)
+        for (const invoice of invoices) {
+            const items = await db.query<InvoiceItem>("SELECT * FROM invoice_items WHERE invoice_id = ?", [invoice.id]);
+            invoice.items = items;
+        }
+
         return invoices;
     }
 
@@ -151,6 +161,7 @@ export class InvoiceService {
                 `UPDATE invoices SET 
                 customer_email = ?,
                 customer_name = ?,
+                customer_address = ?,
                 amount = ?,
                 processing_fee = ?,
                 description = ?,
@@ -159,6 +170,7 @@ export class InvoiceService {
                 [
                     data.customer_email,
                     data.customer_name,
+                    data.customer_address || null,
                     data.amount,
                     data.processing_fee || 0,
                     data.description || null,

@@ -34,6 +34,14 @@ export async function runMigrations(): Promise<void> {
       // Column likely exists
     }
 
+    // Manual migration for customer_address
+    try {
+      await db.exec("ALTER TABLE invoices ADD COLUMN customer_address TEXT");
+      logger.info("Added customer_address column to invoices");
+    } catch (e) {
+      // Column likely exists
+    }
+
     logger.info("Database migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);
