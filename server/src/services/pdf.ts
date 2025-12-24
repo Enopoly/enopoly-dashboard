@@ -67,21 +67,21 @@ export class PdfService {
             .fillColor("#000000")
             .text(invoice.customer_name, 50, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 50, top + 30, { width: 190 })
+            .text(invoice.customer_email, 50, top + 30, { width: 155 })
             // Placeholder address if not in DB, matching style
             .text("United States", 50, doc.y);
 
-        // SHIP TO (Mirroring Bill To for now as we don't have separate ship addr)
+        // SHIP TO
         doc
             .font("Helvetica-Bold")
             .fontSize(10)
             .fillColor("#aaaaaa")
-            .text("SHIP TO", 250, top)
+            .text("SHIP TO", 215, top)
             .fillColor("#000000")
-            .text(invoice.customer_name, 250, top + 15)
+            .text(invoice.customer_name, 215, top + 15)
             .font("Helvetica")
-            .text(invoice.customer_email, 250, top + 30, { width: 190 })
-            .text("United States", 250, doc.y);
+            .text(invoice.customer_email, 215, top + 30, { width: 155 })
+            .text("United States", 215, doc.y);
     }
 
     private static generateOrderDetails(doc: PDFKit.PDFDocument, invoice: Invoice) {
@@ -89,12 +89,12 @@ export class PdfService {
         const lineHeight = 15;
 
         // Define columns to prevent overlap
-        // Label Column: Width 150, Ends at 450 (Start ~300)
-        // Value Column: Width 100, Ends at 560 (Start 460)
-        const labelX = 300;
-        const labelWidth = 150;
-        const valueX = 460;
-        const valueWidth = 100;
+        // Label Column: Start 380, Width 100 (Fits "P.O./S.O. Number:")
+        // Value Column: Start 485, Width 75
+        const labelX = 380;
+        const labelWidth = 100;
+        const valueX = 485;
+        const valueWidth = 75;
 
         doc.font("Helvetica-Bold").fontSize(10);
 

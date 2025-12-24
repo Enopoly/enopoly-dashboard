@@ -74,9 +74,9 @@ export default function InvoiceView() {
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
                         {/* Invoice Summary */}
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h1 className="text-2xl font-bold tracking-tight text-gray-900">Invoice {invoice.invoice_number}</h1>
-                                <div className="flex items-center gap-2">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <h1 className="text-2xl font-bold tracking-tight text-gray-900 break-all">Invoice {invoice.invoice_number}</h1>
+                                <div className="flex items-center gap-2 self-start md:self-auto">
                                     <Button
                                         variant="outline"
                                         onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:3002/api'}/invoices/${invoice.id}/pdf`, '_blank')}
