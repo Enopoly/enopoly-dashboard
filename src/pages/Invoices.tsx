@@ -244,7 +244,7 @@ const Invoices = () => {
                                 <Plus className="mr-2 h-4 w-4" /> Create Invoice
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>{editingId ? "Edit Invoice" : "Create New Invoice"}</DialogTitle>
                                 <DialogDescription>
