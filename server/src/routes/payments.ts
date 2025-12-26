@@ -21,7 +21,7 @@ router.post("/charge", async (req, res) => {
 
     logger.info(`Processing payment for invoice ${invoiceId}. Amount from request: ${amount}`);
 
-    const numericAmount = parseFloat(amount);
+    const numericAmount = parseFloat(Number(amount).toFixed(2));
     if (isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({
         success: false,

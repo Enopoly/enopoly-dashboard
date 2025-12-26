@@ -3,14 +3,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Upload, ExternalLink, Copy, Loader2, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Search, Upload, ExternalLink, Copy, Loader2, DollarSign, TrendingUp, Calendar, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { fakeApiCall, fetchAuthorizeNetTransactions } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const Transactions = () => {
     const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
     const [isExporting, setIsExporting] = useState(false);
 
     // Default to last 30 days
@@ -44,14 +52,14 @@ const Transactions = () => {
         try {
             const filteredData = filteredTransactions;
 
-            const headers = ["Transaction ID", "Status", "Amount", "Customer", "Date", "Card Type"];
+            const headers = ["Transaction ID", "Status", "Amount", "Invoice #", "Date", "Card Type"];
             const csvRows = [
                 headers.join(','),
                 ...filteredData.map(t => [
                     `"${t.transactionId}"`,
                     `"${t.transactionStatus}"`,
                     `"${t.settleAmount}"`,
-                    `"${t.firstName} ${t.lastName}"`,
+                    `"${t.invoiceNumber || ''}"`,
                     `"${new Date(t.submitTime).toLocaleDateString()}"`,
                     `"${t.accountType}"`
                 ].join(','))
@@ -82,13 +90,22 @@ const Transactions = () => {
 
     const filteredTransactions = transactions.filter((transaction: any) => {
         const searchLower = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = (
             transaction.transactionId?.toLowerCase().includes(searchLower) ||
             transaction.firstName?.toLowerCase().includes(searchLower) ||
             transaction.lastName?.toLowerCase().includes(searchLower) ||
             transaction.invoiceNumber?.toLowerCase().includes(searchLower)
         );
-    });
+
+        let matchesStatus = true;
+        if (statusFilter === "successful") {
+            matchesStatus = ["settledSuccessfully", "capturedPendingSettlement", "refundSettledSuccessfully"].includes(transaction.transactionStatus);
+        } else if (statusFilter === "declined") {
+            matchesStatus = transaction.transactionStatus === "declined";
+        }
+
+        return matchesSearch && matchesStatus;
+    }).sort((a: any, b: any) => new Date(b.submitTime).getTime() - new Date(a.submitTime).getTime());
 
     const getStatusColor = (status: string) => {
         if (status === "settledSuccessfully") return "bg-success/10 text-success hover:bg-success/20";
@@ -168,6 +185,21 @@ const Transactions = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
+                        <div className="w-full sm:w-[180px]">
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger>
+                                    <div className="flex items-center gap-2">
+                                        <Filter className="w-4 h-4 text-muted-foreground" />
+                                        <SelectValue placeholder="Filter by status" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Transactions</SelectItem>
+                                    <SelectItem value="successful">Successful</SelectItem>
+                                    <SelectItem value="declined">Declined</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -181,7 +213,7 @@ const Transactions = () => {
                                     <TableHead className="min-w-[150px]">Transaction ID</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Amount</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Customer</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Invoice #</TableHead>
                                     <TableHead className="hidden md:table-cell">Card</TableHead>
                                     <TableHead className="hidden md:table-cell">Date</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -219,7 +251,7 @@ const Transactions = () => {
                                                     </Button>
                                                 </div>
                                                 <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                                                    {transaction.firstName} {transaction.lastName} • {new Date(transaction.submitTime).toLocaleDateString()}
+                                                    {transaction.invoiceNumber || "No Invoice"} • {new Date(transaction.submitTime).toLocaleDateString()}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -229,7 +261,7 @@ const Transactions = () => {
                                             </TableCell>
                                             <TableCell className="font-semibold">${transaction.settleAmount.toFixed(2)}</TableCell>
                                             <TableCell className="hidden sm:table-cell">
-                                                {transaction.firstName} {transaction.lastName}
+                                                {transaction.invoiceNumber || "-"}
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
                                                 {transaction.accountType} ****{transaction.accountNumber}
