@@ -55,6 +55,7 @@ const Invoices = () => {
     ]);
     const [autoFee, setAutoFee] = useState(true);
     const [customFee, setCustomFee] = useState("");
+    const [sendEmail, setSendEmail] = useState(true);
 
     const [formData, setFormData] = useState({
         customer_name: "",
@@ -183,8 +184,10 @@ const Invoices = () => {
             setEditingId(null);
             setFormData({ customer_name: "", customer_email: "", customer_address: "" });
             setItems([{ name: "", description: "", quantity: 1, price: 0 }]);
+            setItems([{ name: "", description: "", quantity: 1, price: 0 }]);
             setAutoFee(true);
             setCustomFee("");
+            setSendEmail(true);
         }
         setIsOpen(open);
     }
@@ -226,6 +229,7 @@ const Invoices = () => {
                 quantity: Number(i.quantity) || 0,
                 price: Number(i.price) || 0
             })),
+            send_email: sendEmail
         };
 
         if (editingId) {
@@ -408,7 +412,16 @@ const Invoices = () => {
                                         <span>Total:</span>
                                         <span>${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
-                                    {/* Global Description Removed */}
+
+                                    <div className="flex items-center space-x-2 pt-2 border-t mt-4">
+                                        <Switch
+                                            id="send-email"
+                                            checked={sendEmail}
+                                            onCheckedChange={setSendEmail}
+                                        />
+                                        <Label htmlFor="send-email">Email Invoice to Customer</Label>
+                                    </div>
+
                                     <DialogFooter>
                                         <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                                             {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

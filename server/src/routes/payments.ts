@@ -95,7 +95,8 @@ router.post("/charge", async (req, res) => {
           amount,
           invoice.customer_name || 'Customer',
           invoice.invoice_number || `INV-${invoiceId}`,
-          result.transactionId || "UNKNOWN"
+          result.transactionId || "UNKNOWN",
+          Number(invoiceId)
         ).catch(err => logger.error("Failed to send receipt email", err));
       }
 

@@ -66,7 +66,7 @@ router.get("/:id/pdf", async (req, res, next) => {
 // POST /api/invoices - Create new invoice
 router.post("/", async (req, res, next) => {
   try {
-    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee } = req.body;
+    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee, send_email = true } = req.body;
 
     if (!customer_email || !customer_name || !amount) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Missing required fields");
@@ -90,18 +90,20 @@ router.post("/", async (req, res, next) => {
     const paymentLink = `${frontendUrl}/invoice/${invoice.id}`;
 
     // Send Email (Async - don't await to return fast)
-    EmailService.sendInvoiceLink(
-      customer_email,
-      paymentLink,
-      invoice.amount,
-      customer_name,
-      invoice.invoice_number
-    ).catch(err => logger.error("Failed to send background email", err));
+    if (send_email) {
+      EmailService.sendInvoiceLink(
+        customer_email,
+        paymentLink,
+        invoice.amount,
+        customer_name,
+        invoice.invoice_number
+      ).catch(err => logger.error("Failed to send background email", err));
+    }
 
     res.status(201).json({
       success: true,
       data: { ...invoice, paymentLink }, // Return link for immediate testing
-      message: "Invoice created and sent successfully",
+      message: send_email ? "Invoice created and sent successfully" : "Invoice created successfully (Email skipped)",
     });
   } catch (error) {
     next(error);
@@ -112,7 +114,7 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee, status } = req.body;
+    const { customer_email, customer_name, customer_address, amount, description, currency, items, processing_fee, status, send_email } = req.body;
 
     if (isNaN(id)) {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
@@ -146,10 +148,23 @@ router.put("/:id", async (req, res, next) => {
     const updatedInvoice = await InvoiceService.getInvoiceById(id);
     logger.info(`Invoice ${id} updated. New Amount in DB: ${updatedInvoice.amount}`);
 
+    if (send_email) {
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
+      const paymentLink = `${frontendUrl}/invoice/${updatedInvoice.id}`;
+
+      EmailService.sendInvoiceLink(
+        updatedInvoice.customer_email,
+        paymentLink,
+        updatedInvoice.amount,
+        updatedInvoice.customer_name,
+        updatedInvoice.invoice_number
+      ).catch(err => logger.error("Failed to send background email on update", err));
+    }
+
     res.json({
       success: true,
       data: updatedInvoice,
-      message: "Invoice updated successfully",
+      message: send_email ? "Invoice updated and email sent successfully" : "Invoice updated successfully",
     });
   } catch (error) {
     next(error);

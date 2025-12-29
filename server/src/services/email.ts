@@ -27,13 +27,15 @@ export class EmailService {
         amount: number,
         customerName: string,
         invoiceNumber: string,
-        transactionId: string
+        transactionId: string,
+        invoiceId: number
     ) {
         return this.sendEmail(to, 'receipt', {
             amount,
             customerName,
             invoiceNumber,
             transactionId,
+            invoiceId,
             date: new Date().toLocaleDateString()
         });
     }
@@ -75,8 +77,16 @@ export class EmailService {
             params.title = "Payment Receipt";
             params.message = `Thank you for your payment! Your transaction ID is ${data.transactionId}.`;
             // Link back to the frontend homepage or a specific dashboard
-            const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
-            params.link = frontendUrl;
+            const apiUrl = process.env.VITE_API_URL || "http://localhost:3002/api";
+            // Check if we are in production (simulated check) or just use the direct link
+            // Ideally this link should be the frontend view /invoice/:id which has a download button,
+            // OR direct API PDF link. Using direct API PDF link as requested.
+            // If invoiceId is missing (legacy calls), fall back to frontend URL
+            if (data.invoiceId) {
+                params.link = `${apiUrl}/invoices/${data.invoiceId}/pdf`;
+            } else {
+                params.link = process.env.FRONTEND_URL || "http://localhost:8080";
+            }
         }
 
         // Simulation / Log if keys missing

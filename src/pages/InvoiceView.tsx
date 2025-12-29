@@ -122,7 +122,10 @@ export default function InvoiceView() {
                                                 <tbody className="divide-y">
                                                     {invoice.items.map((item, i) => (
                                                         <tr key={i}>
-                                                            <td className="p-3">{item.description}</td>
+                                                            <td className="p-3">
+                                                                <div className="font-semibold">{item.name}</div>
+                                                                <div className="text-sm text-muted-foreground">{item.description}</div>
+                                                            </td>
                                                             <td className="p-3 text-right">{Number(item.quantity)}</td>
                                                             <td className="p-3 text-right">${Number(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                             <td className="p-3 text-right">${(Number(item.quantity) * Number(item.price)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -181,7 +184,7 @@ export default function InvoiceView() {
                                 </Card>
                             ) : (
                                 <PaymentForm
-                                    invoiceId={invoice.id}
+                                    invoiceId={invoice.id.toString()}
                                     amount={invoice.amount}
                                     onSuccess={(txId) => {
                                         // Refresh logic or redirect
