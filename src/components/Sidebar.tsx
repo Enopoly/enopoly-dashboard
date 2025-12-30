@@ -18,7 +18,7 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Invoices", url: "/invoices", icon: FileText },
   { title: "Transactions", url: "/transactions", icon: Receipt },
-  { title: "Payouts", url: "/payouts", icon: Wallet },
+  // { title: "Payouts", url: "/payouts", icon: Wallet }, // Hidden as per client request
 ];
 
 const SidebarContent = () => {

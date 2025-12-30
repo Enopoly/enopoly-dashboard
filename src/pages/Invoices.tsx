@@ -425,7 +425,10 @@ const Invoices = () => {
                                     <DialogFooter>
                                         <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                                             {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            {editingId ? "Update Invoice" : "Create & Send"}
+                                            {editingId
+                                                ? (sendEmail ? "Update & Send" : "Update Draft")
+                                                : (sendEmail ? "Create & Send" : "Save as Draft")
+                                            }
                                         </Button>
                                     </DialogFooter>
                                 </div>

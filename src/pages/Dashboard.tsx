@@ -104,7 +104,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="TOTAL REVENUE" value={`$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+20.1% from last month" icon={DollarSign} />
         <StatCard title="TRANSACTIONS" value={transactions.length.toString()} change="+180 today" icon={Activity} />
-        <StatCard title="PAYOUTS" value="$0.00" change="Not Configured" icon={TrendingUp} />
+        {/* <StatCard title="PAYOUTS" value="$0.00" change="Not Configured" icon={TrendingUp} /> */}
         <StatCard title="SUCCESS RATE" value={`${successRate}%`} change="+2.5% from last week" icon={CheckCircle} />
       </div>
 
