@@ -30,10 +30,18 @@ export const NotificationBell = () => {
                 id: inv.id,
                 message: `New invoice ${inv.invoice_number} for ${inv.customer_name}`,
                 time: new Date(inv.created_at).toLocaleString(),
-                read: false
+                read: false,
+                timestamp: new Date(inv.created_at).getTime()
             }));
-            setNotifications(recent);
-            setUnreadCount(recent.filter(n => !n.read).length);
+
+            // Filter out cleared notifications
+            const lastCleared = localStorage.getItem('notificationLastCleared');
+            const filteredRecent = lastCleared
+                ? recent.filter(n => n.timestamp > parseInt(lastCleared))
+                : recent;
+
+            setNotifications(filteredRecent);
+            setUnreadCount(filteredRecent.filter(n => !n.read).length);
         } catch (error) {
             console.error('Failed to load notifications:', error);
         }
@@ -42,6 +50,12 @@ export const NotificationBell = () => {
     const markAllAsRead = () => {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         setUnreadCount(0);
+    };
+
+    const clearNotifications = () => {
+        setNotifications([]);
+        setUnreadCount(0);
+        localStorage.setItem('notificationLastCleared', Date.now().toString());
     };
 
     return (
@@ -63,11 +77,18 @@ export const NotificationBell = () => {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h4 className="font-semibold">Notifications</h4>
-                        {unreadCount > 0 && (
-                            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-                                Mark all as read
-                            </Button>
-                        )}
+                        <div className="flex gap-2">
+                            {unreadCount > 0 && (
+                                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7 px-2">
+                                    Read all
+                                </Button>
+                            )}
+                            {notifications.length > 0 && (
+                                <Button variant="ghost" size="sm" onClick={clearNotifications} className="text-xs h-7 px-2">
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <div className="space-y-2">
                         {notifications.length === 0 ? (
