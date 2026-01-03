@@ -22,7 +22,6 @@ const paymentSchema = z.object({
     expirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Invalid date format (MM/YY)"),
     cvv: z.string().min(3, "CVV must be 3 or 4 digits").max(4, "CVV must be 3 or 4 digits").regex(/^\d+$/, "CVV must contain only digits"),
     cardHolderName: z.string().min(2, "Name must be at least 2 characters"),
-    zipCode: z.string().min(5, "Zip code must be at least 5 characters").optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
@@ -44,7 +43,6 @@ export function PaymentForm({ invoiceId, amount, onSuccess }: PaymentFormProps) 
             expirationDate: "",
             cvv: "",
             cardHolderName: "",
-            zipCode: "",
         },
     });
 
@@ -68,7 +66,6 @@ export function PaymentForm({ invoiceId, amount, onSuccess }: PaymentFormProps) 
                         expirationDate: formattedExp,
                         cvv: data.cvv,
                         cardHolderName: data.cardHolderName,
-                        zipCode: data.zipCode,
                     },
                 }),
             });
@@ -181,19 +178,7 @@ export function PaymentForm({ invoiceId, amount, onSuccess }: PaymentFormProps) 
                         />
                     </div>
 
-                    <FormField
-                        control={form.control}
-                        name="zipCode"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Zip Code</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="10001" {...field} maxLength={10} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+
 
                     <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                         {isLoading ? (
