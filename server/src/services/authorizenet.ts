@@ -32,12 +32,26 @@ export class AuthorizeNetService implements PaymentGateway {
                 customer.setEmail(cardData.email);
             }
 
+            // Billing Address (Required for AVS)
+            const billTo = new APIContracts.CustomerAddressType();
+            if (cardData.cardHolderName) {
+                const names = cardData.cardHolderName.trim().split(' ');
+                const firstName = names[0];
+                const lastName = names.length > 1 ? names.slice(1).join(' ') : "";
+                billTo.setFirstName(firstName);
+                billTo.setLastName(lastName);
+            }
+            if (cardData.zipCode) {
+                billTo.setZip(cardData.zipCode);
+            }
+
             const transactionRequestType = new APIContracts.TransactionRequestType();
             transactionRequestType.setTransactionType(APIContracts.TransactionTypeEnum.AUTHCAPTURETRANSACTION);
             transactionRequestType.setPayment(paymentType);
             transactionRequestType.setAmount(amount);
             transactionRequestType.setOrder(orderDetails);
             transactionRequestType.setCustomer(customer);
+            transactionRequestType.setBillTo(billTo);
 
             const createRequest = new APIContracts.CreateTransactionRequest();
             createRequest.setMerchantAuthentication(this.merchantAuthenticationType);
