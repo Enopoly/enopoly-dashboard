@@ -43,6 +43,24 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Database Migration Middleware (for Serverless/Cold Starts)
+let isMigrated = false;
+app.use(async (_req, _res, next) => {
+  if (!isMigrated) {
+    try {
+      if (process.env.NODE_ENV !== "test") { // Avoid migrations in test/build if needed
+        await getDatabase(); // Initialize connection
+        await runMigrations();
+      }
+      isMigrated = true;
+    } catch (error) {
+      logger.error("Failed to run migrations on startup", error);
+      // We could fail the request here, but let's let it try in case it's transient or partial
+    }
+  }
+  next();
+});
+
 // Health check endpoint
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
@@ -79,21 +97,9 @@ app.use((err: Error | AppError, req: Request, res: Response, _next: NextFunction
   res.status(errorResponse.error.statusCode).json(errorResponse);
 });
 
-// Initialize database and run migrations
-(async () => {
-  try {
-    logger.info("Initializing database...");
-    getDatabase(); // Initialize connection
 
-    // Run migrations
-    await runMigrations();
-
-    logger.info("Database initialization complete");
-  } catch (error) {
-    logger.error("Failed to initialize database", error);
-    process.exit(1);
-  }
-})();
+// Initialize database connection immediately (but migrations run in middleware)
+getDatabase();
 
 // Export app for Vercel
 export default app;
