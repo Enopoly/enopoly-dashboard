@@ -25,6 +25,8 @@ export interface Invoice {
     created_at: string;
     updated_at: string;
     items?: InvoiceItem[];
+    tax_rate?: number;
+    tax_amount?: number;
 }
 
 export interface InvoiceItemDTO {
@@ -43,6 +45,9 @@ export interface CreateInvoiceDTO {
     description?: string;
     currency?: string;
     items?: InvoiceItemDTO[];
+    invoice_number?: string;
+    tax_rate?: number;
+    tax_amount?: number;
 }
 
 export class InvoiceService {
@@ -64,14 +69,14 @@ export class InvoiceService {
      */
     static async createInvoice(data: CreateInvoiceDTO): Promise<Invoice> {
         const db = getDatabase();
-        const invoiceNumber = this.generateInvoiceNumber();
+        const invoiceNumber = data.invoice_number || this.generateInvoiceNumber();
 
         try {
             const sql = `
         INSERT INTO invoices (
-          invoice_number, customer_email, customer_name, customer_address, amount, processing_fee, currency, description, status
+          invoice_number, customer_email, customer_name, customer_address, amount, processing_fee, currency, description, status, tax_rate, tax_amount
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, 'pending'
+          ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?
         )
       `;
 
@@ -83,7 +88,9 @@ export class InvoiceService {
                 data.amount,
                 data.processing_fee || 0,
                 data.currency || "USD",
-                data.description || null
+                data.description || null,
+                data.tax_rate || 0,
+                data.tax_amount || 0
             ]);
 
             const invoiceId = Number(info.lastInsertRowid);
@@ -167,6 +174,9 @@ export class InvoiceService {
                 amount = ?,
                 processing_fee = ?,
                 description = ?,
+                invoice_number = ?,
+                tax_rate = ?,
+                tax_amount = ?,
                 updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?`,
                 [
@@ -176,6 +186,9 @@ export class InvoiceService {
                     data.amount,
                     data.processing_fee || 0,
                     data.description || null,
+                    data.invoice_number,
+                    data.tax_rate || 0,
+                    data.tax_amount || 0,
                     id
                 ]
             );

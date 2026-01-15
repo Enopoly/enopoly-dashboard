@@ -77,7 +77,7 @@ export class EmailService {
             params.title = "Payment Receipt";
             params.message = `Thank you for your payment! Your transaction ID is ${data.transactionId}.`;
             // Link back to the frontend homepage or a specific dashboard
-            const apiUrl = process.env.VITE_API_URL || "http://localhost:3002/api";
+            const apiUrl = process.env.API_URL || process.env.VITE_API_URL || "http://localhost:3002/api";
             // Check if we are in production (simulated check) or just use the direct link
             // Ideally this link should be the frontend view /invoice/:id which has a download button,
             // OR direct API PDF link. Using direct API PDF link as requested.
