@@ -52,6 +52,21 @@ export async function runMigrations(): Promise<void> {
       // Column likely exists
     }
 
+    // Manual migration for tax fields
+    try {
+      await db.exec("ALTER TABLE invoices ADD COLUMN tax_rate REAL DEFAULT 0");
+      logger.info("Added tax_rate column to invoices");
+    } catch (e) {
+      // Column likely exists
+    }
+
+    try {
+      await db.exec("ALTER TABLE invoices ADD COLUMN tax_amount REAL DEFAULT 0");
+      logger.info("Added tax_amount column to invoices");
+    } catch (e) {
+      // Column likely exists
+    }
+
     logger.info("Database migrations completed successfully");
   } catch (error) {
     logger.error("Migration failed", error);

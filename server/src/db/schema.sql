@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   status TEXT CHECK(status IN ('pending', 'paid', 'refunded', 'voided')) DEFAULT 'pending',
   description TEXT,
   processing_fee REAL DEFAULT 0,
+  tax_rate REAL DEFAULT 0,
+  tax_amount REAL DEFAULT 0,
   customer_address TEXT,
   authorizenet_transaction_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
