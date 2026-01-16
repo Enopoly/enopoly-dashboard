@@ -90,10 +90,11 @@ export const fetchTransactions = async (): Promise<any[]> => {
   return data.data;
 };
 
-export const refundTransaction = async (transactionId: string): Promise<any> => {
+export const refundTransaction = async (transactionId: string, amount?: number): Promise<any> => {
   const response = await fetch(`${API_URL}/payments/refund/${transactionId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
   });
   const data = await response.json();
   if (!data.success) throw new Error(data.message || "Refund failed");

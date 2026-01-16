@@ -241,14 +241,16 @@ const Invoices = () => {
         }
         setIsOpen(open);
     }
-    const [refundTxId, setRefundTxId] = useState<string | null>(null);
+    const [refundData, setRefundData] = useState<{ id: string, maxAmount: number } | null>(null);
+    const [refundAmount, setRefundAmount] = useState<string>("");
 
     const refundMutation = useMutation({
-        mutationFn: refundTransaction,
+        mutationFn: ({ id, amount }: { id: string, amount: number }) => refundTransaction(id, amount),
         onSuccess: () => {
             toast.success("Invoice refunded successfully");
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
-            setRefundTxId(null);
+            setRefundData(null);
+            setRefundAmount("");
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to refund invoice");
@@ -619,7 +621,10 @@ const Invoices = () => {
                                                             <>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem
-                                                                    onClick={() => setRefundTxId(invoice.authorizenet_transaction_id!)}
+                                                                    onClick={() => {
+                                                                        setRefundData({ id: invoice.authorizenet_transaction_id!, maxAmount: invoice.amount });
+                                                                        setRefundAmount(invoice.amount.toString());
+                                                                    }}
                                                                     className="text-destructive focus:text-destructive"
                                                                 >
                                                                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -647,26 +652,42 @@ const Invoices = () => {
                 </CardContent>
             </Card>
 
-            <AlertDialog open={!!refundTxId} onOpenChange={(open) => !open && setRefundTxId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will refund the payment for this invoice. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={() => refundTxId && refundMutation.mutate(refundTxId)}
-                            className="bg-destructive hover:bg-destructive/90"
+            <Dialog open={!!refundData} onOpenChange={(open) => !open && setRefundData(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Refund Invoice</DialogTitle>
+                        <DialogDescription>
+                            Enter the amount to refund. Max: ${refundData?.maxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Refund Amount</Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                <Input
+                                    type="number"
+                                    value={refundAmount}
+                                    onChange={(e) => setRefundAmount(e.target.value)}
+                                    max={refundData?.maxAmount}
+                                    className="pl-7"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRefundData(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => refundData && refundMutation.mutate({ id: refundData.id, amount: parseFloat(refundAmount) })}
+                            disabled={!refundAmount || parseFloat(refundAmount) <= 0 || parseFloat(refundAmount) > (refundData?.maxAmount || 0) || refundMutation.isPending}
                         >
                             {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Confirm Refund
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -687,7 +708,7 @@ const Invoices = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </div >
     );
 };
 
