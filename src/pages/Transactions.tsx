@@ -216,7 +216,6 @@ const Transactions = () => {
                                     <TableHead className="hidden sm:table-cell">Invoice #</TableHead>
                                     <TableHead className="hidden md:table-cell">Card</TableHead>
                                     <TableHead className="hidden md:table-cell">Date</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -268,20 +267,6 @@ const Transactions = () => {
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell text-muted-foreground">
                                                 {new Date(transaction.submitTime).toLocaleDateString()}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {transaction.invoiceNumber && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            onClick={() => window.open(`/invoice/${transaction.invoiceNumber}`, '_blank')}
-                                                        >
-                                                            <ExternalLink className="w-4 h-4" />
-                                                        </Button>
-                                                    )}
-                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
