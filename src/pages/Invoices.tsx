@@ -186,13 +186,14 @@ const Invoices = () => {
 
     const startEdit = (invoice: any) => {
         setEditingId(invoice.id);
+        const matchingState = US_STATES.find(s => Math.abs(s.rate - (invoice.tax_rate || 0)) < 0.0001);
         setFormData({
             invoice_number: invoice.invoice_number,
             customer_name: invoice.customer_name,
             customer_email: invoice.customer_email,
             customer_address: invoice.customer_address || "",
             tax_rate: invoice.tax_rate || 0,
-            tax_state: "", // We might not persist state code, only rate/amount, but can leave empty or try to infer
+            tax_state: matchingState?.code || "",
         });
 
         if (invoice.items && invoice.items.length > 0) {
@@ -243,6 +244,8 @@ const Invoices = () => {
     }
     const [refundData, setRefundData] = useState<{ id: string, maxAmount: number } | null>(null);
     const [refundAmount, setRefundAmount] = useState<string>("");
+    const [savedRefundId, setSavedRefundId] = useState<string>("");  // Preserve ID across dialogs
+    const [confirmRefund, setConfirmRefund] = useState(false);
 
     const refundMutation = useMutation({
         mutationFn: ({ id, amount }: { id: string, amount: number }) => refundTransaction(id, amount),
@@ -251,6 +254,8 @@ const Invoices = () => {
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
             setRefundData(null);
             setRefundAmount("");
+            setSavedRefundId("");
+            setConfirmRefund(false);
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to refund invoice");
@@ -623,7 +628,7 @@ const Invoices = () => {
                                                                 <DropdownMenuItem
                                                                     onClick={() => {
                                                                         setRefundData({ id: invoice.authorizenet_transaction_id!, maxAmount: invoice.amount });
-                                                                        setRefundAmount(invoice.amount.toString());
+                                                                        setRefundAmount("");  // Empty - user must enter manually
                                                                     }}
                                                                     className="text-destructive focus:text-destructive"
                                                                 >
@@ -676,18 +681,49 @@ const Invoices = () => {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setRefundData(null)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => { setRefundData(null); setRefundAmount(""); }}>Cancel</Button>
                         <Button
                             variant="destructive"
-                            onClick={() => refundData && refundMutation.mutate({ id: refundData.id, amount: parseFloat(refundAmount) })}
-                            disabled={!refundAmount || parseFloat(refundAmount) <= 0 || parseFloat(refundAmount) > (refundData?.maxAmount || 0) || refundMutation.isPending}
+                            onClick={() => {
+                                setSavedRefundId(refundData?.id || "");  // Save ID before closing dialog
+                                setRefundData(null);
+                                setConfirmRefund(true);
+                            }}
+                            disabled={!refundAmount || parseFloat(refundAmount) <= 0 || parseFloat(refundAmount) > (refundData?.maxAmount || 0)}
                         >
-                            {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Confirm Refund
+                            Next
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Refund Confirmation Dialog - Step 2 */}
+            <AlertDialog open={confirmRefund} onOpenChange={(open) => !open && setConfirmRefund(false)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You are about to refund <strong>${parseFloat(refundAmount || "0").toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>.
+                            <br /><br />
+                            This action cannot be undone. Are you absolutely sure?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => { setConfirmRefund(false); setRefundAmount(""); setSavedRefundId(""); }}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                const savedData = { id: savedRefundId, amount: parseFloat(refundAmount) };
+                                refundMutation.mutate(savedData);
+                            }}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Yes, Refund ${parseFloat(refundAmount || "0").toFixed(2)}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

@@ -174,32 +174,41 @@ export class PdfService {
         currentPosition += 15;
 
         // Totals Section
-        const totalX = 400;
+        const totalX = 360;  // Moved left to give more space for labels
         const valX = 470;
 
         doc.font("Helvetica-Bold");
 
         // Subtotal
-        doc.text("Subtotal:", totalX, currentPosition, { width: 80, align: "right" });
+        doc.text("Subtotal:", totalX, currentPosition, { width: 120, align: "right" });
         doc.text(this.formatCurrency(subtotal, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
         currentPosition += 15;
 
+        // Sales Tax
+        if (invoice.tax_amount && invoice.tax_amount > 0) {
+            const taxRate = invoice.tax_rate || 0;
+            const taxLabel = `Sales Tax (${(taxRate * 100).toFixed(2)}%):`;
+            doc.text(taxLabel, totalX, currentPosition, { width: 120, align: "right" });
+            doc.text(this.formatCurrency(invoice.tax_amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
+            currentPosition += 15;
+        }
+
         // Processing Fee
         if (invoice.processing_fee > 0) {
-            doc.text("Processing Fee:", totalX, currentPosition, { width: 80, align: "right" });
+            doc.text("Processing Fee:", totalX, currentPosition, { width: 120, align: "right" });
             doc.text(this.formatCurrency(invoice.processing_fee, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
             currentPosition += 15;
         }
 
         // Total
-        doc.text("Total:", totalX, currentPosition, { width: 80, align: "right" });
+        doc.text("Total:", totalX, currentPosition, { width: 120, align: "right" });
         doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
 
         currentPosition += 20;
 
         // Amount Due Bottom
         doc.font("Helvetica-Bold");
-        doc.text("Amount Due (USD):", totalX - 50, currentPosition, { width: 130, align: "right" });
+        doc.text("Amount Due (USD):", totalX - 10, currentPosition, { width: 130, align: "right" });
         doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
     }
 

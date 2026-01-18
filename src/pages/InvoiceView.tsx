@@ -143,8 +143,14 @@ export default function InvoiceView() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">Subtotal</span>
-                                            <span>${(invoice.amount - (invoice.processing_fee || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span>${(invoice.amount - (invoice.processing_fee || 0) - (invoice.tax_amount || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
+                                        {invoice.tax_amount && invoice.tax_amount > 0 ? (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Sales Tax ({((invoice.tax_rate || 0) * 100).toFixed(2)}%)</span>
+                                                <span>${invoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                        ) : null}
                                         {invoice.processing_fee && invoice.processing_fee > 0 ? (
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Processing Fee</span>

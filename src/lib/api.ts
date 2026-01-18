@@ -38,6 +38,8 @@ export interface Invoice {
   customer_address?: string;
   amount: number;
   processing_fee?: number;
+  tax_rate?: number;
+  tax_amount?: number;
   authorizenet_transaction_id?: string;
   currency: string;
   status: "pending" | "paid" | "refunded" | "voided";

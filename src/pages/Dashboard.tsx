@@ -19,6 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Loader2, RotateCcw } from "lucide-react";
 
 const getStatusColor = (status: string) => {
@@ -38,15 +48,21 @@ const Dashboard = () => {
     initialData: []
   });
 
-  const [refundTxId, setRefundTxId] = useState<string | null>(null);
+  const [refundData, setRefundData] = useState<{ id: string, maxAmount: number } | null>(null);
+  const [refundAmount, setRefundAmount] = useState<string>("");
+  const [savedRefundId, setSavedRefundId] = useState<string>("");  // Preserve ID across dialogs
+  const [confirmRefund, setConfirmRefund] = useState(false);
   const queryClient = useQueryClient();
 
   const refundMutation = useMutation({
-    mutationFn: refundTransaction,
+    mutationFn: ({ id, amount }: { id: string, amount: number }) => refundTransaction(id, amount),
     onSuccess: () => {
       toast.success("Transaction refunded successfully");
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      setRefundTxId(null);
+      setRefundData(null);
+      setRefundAmount("");
+      setSavedRefundId("");
+      setConfirmRefund(false);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to refund transaction");
@@ -171,7 +187,11 @@ const Dashboard = () => {
                     variant="outline"
                     size="sm"
                     className="sm:ml-4 text-xs h-8 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setRefundTxId(transaction.id)}
+                    onClick={() => {
+                      const amount = parseFloat(transaction.amount.replace(/[^0-9.-]+/g, ""));
+                      setRefundData({ id: transaction.id, maxAmount: amount });
+                      setRefundAmount("");  // Empty - user must enter manually
+                    }}
                   >
                     <RotateCcw className="w-3 h-3 mr-1" /> Refund
                   </Button>
@@ -180,22 +200,70 @@ const Dashboard = () => {
             ))}
           </div>
 
-          <AlertDialog open={!!refundTxId} onOpenChange={(open) => !open && setRefundTxId(null)}>
+          {/* Refund Amount Entry Dialog - Step 1 */}
+          <Dialog open={!!refundData} onOpenChange={(open) => !open && setRefundData(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Refund Transaction</DialogTitle>
+                <DialogDescription>
+                  Enter the amount to refund. Max: ${refundData?.maxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Refund Amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                      max={refundData?.maxAmount}
+                      className="pl-7"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setRefundData(null); setRefundAmount(""); }}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setSavedRefundId(refundData?.id || "");  // Save ID before closing dialog
+                    setRefundData(null);
+                    setConfirmRefund(true);
+                  }}
+                  disabled={!refundAmount || parseFloat(refundAmount) <= 0 || parseFloat(refundAmount) > (refundData?.maxAmount || 0)}
+                >
+                  Next
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Refund Confirmation Dialog - Step 2 */}
+          <AlertDialog open={confirmRefund} onOpenChange={(open) => !open && setConfirmRefund(false)}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will refund the transaction {refundTxId}. This action cannot be undone.
+                  You are about to refund <strong>${parseFloat(refundAmount || "0").toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>.
+                  <br /><br />
+                  This action cannot be undone. Are you absolutely sure?
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => { setConfirmRefund(false); setRefundAmount(""); setSavedRefundId(""); }}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => refundTxId && refundMutation.mutate(refundTxId)}
+                  onClick={() => {
+                    const savedData = { id: savedRefundId, amount: parseFloat(refundAmount) };
+                    refundMutation.mutate(savedData);
+                  }}
                   className="bg-destructive hover:bg-destructive/90"
                 >
                   {refundMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Confirm Refund
+                  Yes, Refund ${parseFloat(refundAmount || "0").toFixed(2)}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
