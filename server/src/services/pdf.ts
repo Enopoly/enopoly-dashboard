@@ -215,7 +215,15 @@ export class PdfService {
     }
 
     private static generatePaymentFooter(doc: PDFKit.PDFDocument, startY: number) {
-        const top = Math.max(startY, 450);  // Ensure minimum spacing, but use dynamic position
+        // Footer needs approximately 200px of space
+        // Letter size page height is 792px, with 50px bottom margin = 742px usable
+        // If startY > 550, add new page to keep footer together
+        let top = startY;
+
+        if (startY > 550) {
+            doc.addPage();
+            top = 50;  // Start at top of new page
+        }
 
         doc.font("Helvetica-Bold").fontSize(10).fillColor("#aaaaaa");
         doc.text("Notes / Terms", 50, top);
