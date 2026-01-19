@@ -16,8 +16,8 @@ export class PdfService {
         this.generateHeader(doc);
         this.generateAddressSection(doc, invoice);
         this.generateOrderDetails(doc, invoice);
-        this.generateInvoiceTable(doc, invoice);
-        this.generatePaymentFooter(doc);
+        const finalPosition = this.generateInvoiceTable(doc, invoice);
+        this.generatePaymentFooter(doc, finalPosition);
 
         return doc;
     }
@@ -130,7 +130,7 @@ export class PdfService {
         doc.text(this.formatCurrency(invoice.amount, invoice.currency), valueX, top + lineHeight * 4, { width: valueWidth, align: "right" });
     }
 
-    private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
+    private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice): number {
         const tableTop = 320;
 
         // Header Background
@@ -210,18 +210,20 @@ export class PdfService {
         doc.font("Helvetica-Bold");
         doc.text("Amount Due (USD):", totalX - 10, currentPosition, { width: 130, align: "right" });
         doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
+
+        return currentPosition + 30;  // Return position for footer
     }
 
-    private static generatePaymentFooter(doc: PDFKit.PDFDocument) {
-        const top = 550; // Ensure enough space
+    private static generatePaymentFooter(doc: PDFKit.PDFDocument, startY: number) {
+        const top = Math.max(startY, 450);  // Ensure minimum spacing, but use dynamic position
 
         doc.font("Helvetica-Bold").fontSize(10).fillColor("#aaaaaa");
         doc.text("Notes / Terms", 50, top);
         doc.text("PAYMENT INFO:", 50, top + 15);
 
         doc.fillColor("#000000").font("Helvetica").fontSize(9);
-        const startY = top + 35;
-        let y = startY;
+        const contentStartY = top + 35;
+        let y = contentStartY;
 
         // Zelle
         doc.text("Zelle Account Details:", 50, y);
