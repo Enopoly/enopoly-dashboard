@@ -53,7 +53,7 @@ const Dashboard = () => {
     }
   });
 
-  const [refundData, setRefundData] = useState<{ id: string, maxAmount: number } | null>(null);
+  const [refundData, setRefundData] = useState<{ id: string, maxAmount: number, remainingBalance: number } | null>(null);
   const [refundAmount, setRefundAmount] = useState<string>("");
   const [savedRefundId, setSavedRefundId] = useState<string>("");  // Preserve ID across dialogs
   const [confirmRefund, setConfirmRefund] = useState(false);
@@ -104,12 +104,16 @@ const Dashboard = () => {
   const recentActivity = transactions.slice(0, 5).map((t, index) => {
     const amountStr = t.type === 'refund' ? `(${t.amount})` : `(${t.amount})`;
     const action = t.type === 'refund' ? 'Refunded' : `Payment ${t.status}`;
+    const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
+    const isPartial = t.type === 'refund' && t.invoiceAmount && amount < t.invoiceAmount;
 
     return {
       id: index,
       event: `${action} ${amountStr} for ${t.customer}`,
-      status: t.status,
-      time: t.date
+      status: t.type === 'refund' ? 'refunded' : t.status,
+      time: t.date,
+      isPartial: isPartial,
+      label: isPartial ? "partial refund" : (t.type === 'refund' ? "refunded" : t.status)
     };
   });
 
@@ -180,7 +184,9 @@ const Dashboard = () => {
                     <p className="text-xs sm:text-sm">{activity.event}</p>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <Badge className={`${getStatusColor(activity.status)} text-xs`} variant="secondary">{activity.status}</Badge>
+                    <Badge className={`${getStatusColor(activity.status, activity.isPartial)} text-xs`} variant="secondary">
+                      {activity.label}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">{activity.time}</span>
                   </div>
                 </div>
@@ -217,14 +223,21 @@ const Dashboard = () => {
                 <p className={`text-base sm:text-lg font-bold sm:text-right ${transaction.type === 'refund' ? 'text-destructive' : ''}`}>
                   {transaction.type === 'refund' ? '-' : ''}{transaction.amount}
                 </p>
-                {transaction.status === 'succeeded' && transaction.type === 'charge' && (
+                {transaction.status === 'succeeded' && transaction.type === 'charge' && (transaction.remainingBalance > 0) && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="sm:ml-4 text-xs h-8 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => {
                       const amount = parseFloat(transaction.amount.replace(/[^0-9.-]+/g, ""));
-                      setRefundData({ id: transaction.id, maxAmount: amount });
+                      // Max refund is the lesser of: ORIGINAL TX amount OR REMAINING balance
+                      const maxRefund = Math.min(amount, transaction.remainingBalance);
+
+                      setRefundData({
+                        id: transaction.id,
+                        maxAmount: maxRefund,
+                        remainingBalance: transaction.remainingBalance
+                      });
                       setRefundAmount("");  // Empty - user must enter manually
                     }}
                   >
@@ -241,7 +254,14 @@ const Dashboard = () => {
               <DialogHeader>
                 <DialogTitle>Refund Transaction</DialogTitle>
                 <DialogDescription>
-                  Enter the amount to refund. Max: ${refundData?.maxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  Enter the amount to refund.<br />
+                  Available to refund: <strong>${refundData?.maxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  {refundData && refundData.maxAmount < refundData.remainingBalance && (
+                    <span className="block text-xs text-muted-foreground mt-1">(Capped by transaction amount)</span>
+                  )}
+                  {refundData && refundData.remainingBalance < refundData.maxAmount && (
+                    <span className="block text-xs text-muted-foreground mt-1">(Capped by invoice remaining balance)</span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
