@@ -296,11 +296,13 @@ const Invoices = () => {
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string, isPartial: boolean = false) => {
+        if (isPartial) return "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400";
         switch (status) {
             case "paid": return "bg-success/10 text-success";
             case "pending": return "bg-warning/10 text-warning";
             case "voided": return "bg-destructive/10 text-destructive";
+            case "refunded": return "bg-warning/10 text-warning";
             default: return "bg-muted text-muted-foreground";
         }
     };
