@@ -138,12 +138,39 @@ router.post("/refund/:id", async (req, res) => {
       // Get invoice ID from transaction
       const tx = await db.get<{ invoice_id: number }>("SELECT invoice_id FROM transactions WHERE authorizenet_transaction_id = ?", [transactionId]);
 
-      // Update transaction status
-      await db.execute("UPDATE transactions SET status = 'refunded' WHERE authorizenet_transaction_id = ?", [transactionId]);
+      // Insert new refund transaction record
+      await db.execute(`
+        INSERT INTO transactions (
+          invoice_id, 
+          authorizenet_transaction_id, 
+          amount, 
+          status, 
+          type, 
+          response_message,
+          created_at
+        )
+        VALUES (?, ?, ?, 'approved', 'refund', ?, datetime('now'))
+      `, [
+        tx?.invoice_id || null,
+        result.transactionId, // The new refund transaction ID
+        amount || 0, // The specific refunded amount
+        result.message || "Refund successful"
+      ]);
 
-      // Update invoice status if found
+      // Calculate total refunded amount for this invoice to check if we should update invoice status
       if (tx && tx.invoice_id) {
-        await db.execute("UPDATE invoices SET status = 'refunded' WHERE id = ?", [tx.invoice_id]);
+        const refundStats = await db.get<{ total_refunded: number }>(`
+          SELECT SUM(amount) as total_refunded 
+          FROM transactions 
+          WHERE invoice_id = ? AND type = 'refund' AND status = 'approved'
+        `, [tx.invoice_id]);
+
+        const invoice = await db.get<{ amount: number }>(`SELECT amount FROM invoices WHERE id = ?`, [tx.invoice_id]);
+
+        // Only mark invoice as refunded if fully refunded
+        if (invoice && (refundStats?.total_refunded || 0) >= invoice.amount) {
+          await db.execute("UPDATE invoices SET status = 'refunded' WHERE id = ?", [tx.invoice_id]);
+        }
       }
 
       res.json({

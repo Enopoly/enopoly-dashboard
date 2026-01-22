@@ -45,7 +45,11 @@ const Dashboard = () => {
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
     queryFn: fetchTransactions,
-    initialData: []
+    initialData: [],
+    select: (data) => {
+      // Sort by date desc just in case
+      return data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
   });
 
   const [refundData, setRefundData] = useState<{ id: string, maxAmount: number } | null>(null);
@@ -78,10 +82,13 @@ const Dashboard = () => {
     }
   };
 
-  const succeededTransactions = transactions.filter(t => t.status === 'succeeded');
+  const succeededTransactions = transactions.filter(t => t.status === 'succeeded' || t.status === 'refunded' || t.status === 'approved');
   const totalRevenue = succeededTransactions.reduce((acc, t) => {
-    const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
-    return acc + amount;
+    const rawAmount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
+    if (t.type === 'refund') {
+      return acc - rawAmount;
+    }
+    return acc + rawAmount;
   }, 0);
 
   const successRate = transactions.length > 0
@@ -105,7 +112,13 @@ const Dashboard = () => {
 
     const dayRevenue = succeededTransactions
       .filter(t => t.date.startsWith(dateStr))
-      .reduce((acc, t) => acc + parseFloat(t.amount.replace(/[^0-9.-]+/g, "")), 0);
+      .reduce((acc, t) => {
+        const rawAmount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
+        if (t.type === 'refund') {
+          return acc - rawAmount;
+        }
+        return acc + rawAmount;
+      }, 0);
 
     return { name: dayName, revenue: dayRevenue };
   });
@@ -181,8 +194,10 @@ const Dashboard = () => {
                   </div>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">{transaction.customer} • {transaction.date}</p>
                 </div>
-                <p className="text-base sm:text-lg font-bold sm:text-right">{transaction.amount}</p>
-                {transaction.status === 'succeeded' && (
+                <p className={`text-base sm:text-lg font-bold sm:text-right ${transaction.type === 'refund' ? 'text-destructive' : ''}`}>
+                  {transaction.type === 'refund' ? '-' : ''}{transaction.amount}
+                </p>
+                {transaction.status === 'succeeded' && transaction.type === 'charge' && (
                   <Button
                     variant="outline"
                     size="sm"
