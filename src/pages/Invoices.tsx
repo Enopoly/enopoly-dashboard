@@ -576,9 +576,16 @@ const Invoices = () => {
                                                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="secondary" className={getStatusColor(invoice.status)}>
-                                                    {invoice.status}
-                                                </Badge>
+                                                {(() => {
+                                                    const totalRefunded = invoice.total_refunded || 0;
+                                                    const isPartial = totalRefunded > 0 && totalRefunded < invoice.amount;
+                                                    const label = isPartial ? "partial refund" : invoice.status;
+                                                    return (
+                                                        <Badge variant="secondary" className={getStatusColor(invoice.status, isPartial)}>
+                                                            {label}
+                                                        </Badge>
+                                                    );
+                                                })()}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>

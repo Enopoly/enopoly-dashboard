@@ -137,7 +137,19 @@ export class InvoiceService {
      */
     static async getAllInvoices(): Promise<Invoice[]> {
         const db = getDatabase();
-        const invoices = await db.query<Invoice>("SELECT * FROM invoices ORDER BY created_at DESC");
+        const invoices = await db.query<Invoice>(`
+            SELECT 
+                i.*,
+                (
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM transactions t
+                    WHERE t.invoice_id = i.id
+                    AND t.type = 'refund'
+                    AND t.status = 'approved'
+                ) as total_refunded
+            FROM invoices i
+            ORDER BY i.created_at DESC
+        `);
 
         // Fetch items for each invoice (to ensure Edit works correctly)
         for (const invoice of invoices) {

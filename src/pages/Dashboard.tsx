@@ -101,7 +101,7 @@ const Dashboard = () => {
     : "0.0";
 
   // Derive recent activity from transactions
-  const recentActivity = transactions.slice(0, 5).map((t, index) => {
+  const recentActivity = transactions.slice(0, 30).map((t, index) => {
     const amountStr = t.type === 'refund' ? `(${t.amount})` : `(${t.amount})`;
     const action = t.type === 'refund' ? 'Refunded' : `Payment ${t.status}`;
     const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
@@ -177,7 +177,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="border-b border-border last:border-0 pb-3 last:pb-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -199,8 +199,8 @@ const Dashboard = () => {
       <Card>
         <CardHeader><CardTitle>Recent Transactions</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-3 md:space-y-4">
-            {transactions.slice(0, 5).map((transaction) => (
+          <div className="space-y-3 md:space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {transactions.slice(0, 30).map((transaction) => (
               <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 md:p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
