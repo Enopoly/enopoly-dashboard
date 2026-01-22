@@ -31,7 +31,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Loader2, RotateCcw } from "lucide-react";
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string, isPartialRefund: boolean = false) => {
+  if (isPartialRefund) return "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400";
   switch (status) {
     case "succeeded": return "bg-success/10 text-success hover:bg-success/20";
     case "processing": return "bg-info/10 text-info hover:bg-info/20";
@@ -91,17 +92,26 @@ const Dashboard = () => {
     return acc + rawAmount;
   }, 0);
 
+  const totalRefunded = transactions
+    .filter(t => t.type === 'refund')
+    .reduce((acc, t) => acc + parseFloat(t.amount.replace(/[^0-9.-]+/g, "")), 0);
+
   const successRate = transactions.length > 0
     ? ((succeededTransactions.length / transactions.length) * 100).toFixed(1)
     : "0.0";
 
   // Derive recent activity from transactions
-  const recentActivity = transactions.slice(0, 5).map((t, index) => ({
-    id: index,
-    event: `Payment ${t.status} for ${t.customer}`,
-    status: t.status,
-    time: t.date
-  }));
+  const recentActivity = transactions.slice(0, 5).map((t, index) => {
+    const amountStr = t.type === 'refund' ? `(${t.amount})` : `(${t.amount})`;
+    const action = t.type === 'refund' ? 'Refunded' : `Payment ${t.status}`;
+
+    return {
+      id: index,
+      event: `${action} ${amountStr} for ${t.customer}`,
+      status: t.status,
+      time: t.date
+    };
+  });
 
   // Derive revenue data (last 7 days)
   const revenueData = Array.from({ length: 7 }, (_, i) => {
@@ -120,7 +130,7 @@ const Dashboard = () => {
         return acc + rawAmount;
       }, 0);
 
-    return { name: dayName, revenue: dayRevenue };
+    return { name: dayName, revenue: parseFloat(dayRevenue.toFixed(2)) };
   });
 
   return (
@@ -133,7 +143,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="TOTAL REVENUE" value={`$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+20.1% from last month" icon={DollarSign} />
         <StatCard title="TRANSACTIONS" value={transactions.length.toString()} change="+180 today" icon={Activity} />
-        {/* <StatCard title="PAYOUTS" value="$0.00" change="Not Configured" icon={TrendingUp} /> */}
+        <StatCard title="TOTAL REFUNDED" value={`$${Math.abs(totalRefunded).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="Last 30 days" icon={RotateCcw} />
         <StatCard title="SUCCESS RATE" value={`${successRate}%`} change="+2.5% from last week" icon={CheckCircle} />
       </div>
 
@@ -151,7 +161,7 @@ const Dashboard = () => {
                   tickFormatter={(value) => `$${value}`}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`$${value}`, "Revenue"]}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
                   contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ fill: 'hsl(var(--chart-1))', r: 4 }} animationDuration={1500} />
@@ -190,7 +200,17 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <code className="text-xs sm:text-sm font-mono font-semibold truncate">{transaction.id}</code>
                     <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleCopyTransactionId(transaction.id)}><Copy className="w-3 h-3" /></Button>
-                    <Badge className={`${getStatusColor(transaction.status)} text-xs`} variant="secondary">{transaction.status}</Badge>
+                    {(() => {
+                      const amount = parseFloat(transaction.amount.replace(/[^0-9.-]+/g, ""));
+                      const isPartial = transaction.type === 'refund' && transaction.invoiceAmount && amount < transaction.invoiceAmount;
+                      const label = isPartial ? "partial refund" : (transaction.type === 'refund' ? "refunded" : transaction.status);
+
+                      return (
+                        <Badge className={`${getStatusColor(transaction.status, isPartial)} text-xs`} variant="secondary">
+                          {label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">{transaction.customer} • {transaction.date}</p>
                 </div>

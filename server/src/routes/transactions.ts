@@ -20,7 +20,8 @@ router.get("/", async (_req, res) => {
         t.created_at,
         i.customer_name,
         i.customer_email,
-        i.invoice_number
+        i.invoice_number,
+        i.amount as invoice_amount
       FROM transactions t
       LEFT JOIN invoices i ON t.invoice_id = i.id
       ORDER BY t.created_at DESC
@@ -32,6 +33,7 @@ router.get("/", async (_req, res) => {
         ? t.authorizenet_transaction_id
         : `TX-${t.id}`,
       invoiceId: t.invoice_id,
+      invoiceAmount: t.invoice_amount,
       status: t.status === 'approved' ? 'succeeded' : t.status, // Map 'approved' to 'succeeded' for UI badges
       amount: `$${t.amount.toFixed(2)}`,
       customer: t.customer_name || 'Unknown',
