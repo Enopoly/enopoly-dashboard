@@ -123,11 +123,12 @@ export class PdfService {
         doc.font("Helvetica").text(dueDate.toLocaleDateString(), valueX, top + lineHeight * 3, { width: valueWidth, align: "right" });
 
         // Amount Due
+        const amountDue = invoice.status === 'paid' ? 0 : invoice.amount;
         doc.rect(labelX + 60, top + lineHeight * 4 - 2, (labelWidth - 60) + valueWidth + 10, 18).fill("#f4f4f4");
 
         doc.fillColor("#000000");
         doc.font("Helvetica-Bold").text("Amount Due (USD):", labelX, top + lineHeight * 4, { width: labelWidth, align: "right" });
-        doc.text(this.formatCurrency(invoice.amount, invoice.currency), valueX, top + lineHeight * 4, { width: valueWidth, align: "right" });
+        doc.text(this.formatCurrency(amountDue, invoice.currency), valueX, top + lineHeight * 4, { width: valueWidth, align: "right" });
     }
 
     private static generateInvoiceTable(doc: PDFKit.PDFDocument, invoice: Invoice): number {
@@ -227,9 +228,10 @@ export class PdfService {
         currentPosition += 20;
 
         // Amount Due Bottom
+        const amountDue = invoice.status === 'paid' ? 0 : invoice.amount;
         doc.font("Helvetica-Bold");
         doc.text("Amount Due (USD):", totalX - 10, currentPosition, { width: 130, align: "right" });
-        doc.text(this.formatCurrency(invoice.amount, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
+        doc.text(this.formatCurrency(amountDue, invoice.currency), valX, currentPosition, { width: 80, align: "right" });
 
         return currentPosition + 30;  // Return position for footer
     }

@@ -159,8 +159,8 @@ export default function InvoiceView() {
                                         ) : null}
                                         <Separator />
                                         <div className="flex justify-between font-bold text-lg">
-                                            <span>Total Due</span>
-                                            <span>${invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span>Amount Due</span>
+                                            <span>${(invoice.status === 'paid' ? 0 : invoice.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                 </CardContent>
