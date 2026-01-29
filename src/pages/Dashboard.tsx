@@ -102,18 +102,24 @@ const Dashboard = () => {
 
   // Derive recent activity from transactions
   const recentActivity = transactions.slice(0, 30).map((t, index) => {
-    const amountStr = t.type === 'refund' ? `(${t.amount})` : `(${t.amount})`;
-    const action = t.type === 'refund' ? 'Refunded' : `Payment ${t.status}`;
-    const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
-    const isPartial = t.type === 'refund' && t.invoiceAmount && amount < t.invoiceAmount;
+    const amountVal = parseFloat(t.amount.replace(/[^0-9.-]+/g, ""));
+    const invoiceAmt = t.invoiceAmount ? (typeof t.invoiceAmount === 'string' ? parseFloat(t.invoiceAmount) : t.invoiceAmount) : 0;
+
+    const isRefund = t.type === 'refund';
+    const isPartial = isRefund && invoiceAmt > 0 && amountVal < invoiceAmt;
+
+    let label = t.status;
+    if (isRefund) {
+      label = isPartial ? 'partial refund' : 'refunded';
+    }
 
     return {
       id: index,
-      event: `${action} ${amountStr} for ${t.customer}`,
-      status: t.type === 'refund' ? 'refunded' : t.status,
+      event: `${isRefund ? 'Refunded' : 'Payment ' + t.status} (${t.amount}) for ${t.customer}`,
+      status: isRefund ? 'refunded' : t.status,
       time: t.date,
       isPartial: isPartial,
-      label: isPartial ? "partial refund" : (t.type === 'refund' ? "refunded" : t.status)
+      label: label
     };
   });
 
@@ -208,7 +214,8 @@ const Dashboard = () => {
                     <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleCopyTransactionId(transaction.id)}><Copy className="w-3 h-3" /></Button>
                     {(() => {
                       const amount = parseFloat(transaction.amount.replace(/[^0-9.-]+/g, ""));
-                      const isPartial = transaction.type === 'refund' && transaction.invoiceAmount && amount < transaction.invoiceAmount;
+                      const invoiceAmt = transaction.invoiceAmount ? (typeof transaction.invoiceAmount === 'string' ? parseFloat(transaction.invoiceAmount) : transaction.invoiceAmount) : 0;
+                      const isPartial = transaction.type === 'refund' && invoiceAmt > 0 && amount < invoiceAmt;
                       const label = isPartial ? "partial refund" : (transaction.type === 'refund' ? "refunded" : transaction.status);
 
                       return (
