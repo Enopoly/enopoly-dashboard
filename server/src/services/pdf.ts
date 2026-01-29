@@ -156,6 +156,26 @@ export class PdfService {
                 const amount = item.price * item.quantity;
                 subtotal += amount;
 
+                // Calculate dynamic height based on description
+                const descriptionHeight = doc.heightOfString(item.description, { width: 220 });
+                const rowHeight = Math.max(descriptionHeight + 20, 40);
+
+                // Check for page break
+                if (currentPosition + rowHeight > 700) {
+                    doc.addPage();
+                    currentPosition = 50; // Reset to top margin
+
+                    // Re-draw headers for new page (simplified)
+                    doc.font("Helvetica-Bold").fontSize(10);
+                    doc.text("Items", 60, currentPosition);
+                    doc.text("Quantity", 300, currentPosition, { width: 50, align: "center" });
+                    doc.text("Price", 400, currentPosition, { width: 80, align: "right" });
+                    doc.text("Amount", 500, currentPosition, { width: 50, align: "right" });
+
+                    currentPosition += 30;
+                    doc.font("Helvetica");
+                }
+
                 // Item Name (Bold)
                 doc.font("Helvetica-Bold").text(item.name || "Item", 60, currentPosition);
                 // Description (Normal)
@@ -165,7 +185,7 @@ export class PdfService {
                 doc.text(this.formatCurrency(item.price, invoice.currency), 400, currentPosition + 5, { width: 80, align: "right" });
                 doc.text(this.formatCurrency(amount, invoice.currency), 470, currentPosition + 5, { width: 80, align: "right" });
 
-                currentPosition += 40; // Spacing
+                currentPosition += rowHeight; // Dynamic spacing
             });
         }
 
