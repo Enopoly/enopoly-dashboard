@@ -1,4 +1,4 @@
-# Waveflow Dashboard
+# Enopoly Dashboard
 
 A modern dashboard application built with React, TypeScript, and Vite.
 
