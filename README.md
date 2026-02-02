@@ -6,9 +6,8 @@ A modern dashboard application built with React, TypeScript, and Vite.
 
 - **Dashboard** - Overview with statistics and charts
 - **Transactions** - View and manage transactions
-- **Payouts** - Manage payout operations
-- **API Keys** - Manage API keys
-- **Webhooks** - Configure webhooks
+- **Invoices** - Manage and track your customer invoices
+
 
 ## Tech Stack
 
