@@ -46,7 +46,6 @@ const Dashboard = () => {
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
     queryFn: fetchTransactions,
-    initialData: [],
     select: (data) => {
       // Sort by date desc just in case
       return data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
