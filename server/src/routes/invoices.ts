@@ -4,19 +4,32 @@ import { InvoiceService } from "../services/invoice";
 import { PdfService } from "../services/pdf";
 import { EmailService } from "../services/email";
 import { AppError, HttpStatus } from "../utils/errors";
+import { cache, CACHE_KEYS, TTL } from "../utils/cache";
 
 const router = Router();
 
 // GET /api/invoices - List all invoices
 router.get("/", async (_req, res, next) => {
   try {
+    // Serve from cache if available
+    const cached = cache.get<any[]>(CACHE_KEYS.ALL_INVOICES);
+    if (cached) {
+      res.set("Cache-Control", "private, max-age=300");
+      res.set("X-Cache", "HIT");
+      return res.json({ success: true, data: cached });
+    }
+
     const invoices = await InvoiceService.getAllInvoices();
-    res.json({
+    cache.set(CACHE_KEYS.ALL_INVOICES, invoices, TTL.INVOICES);
+
+    res.set("Cache-Control", "private, max-age=300");
+    res.set("X-Cache", "MISS");
+    return res.json({
       success: true,
       data: invoices,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -103,6 +116,9 @@ router.post("/", async (req, res, next) => {
       ).catch(err => logger.error("Failed to send background email", err));
     }
 
+    // Bust invoice cache — new invoice was created
+    cache.bust(CACHE_KEYS.ALL_INVOICES);
+
     res.status(201).json({
       success: true,
       data: { ...invoice, paymentLink }, // Return link for immediate testing
@@ -167,6 +183,9 @@ router.put("/:id", async (req, res, next) => {
       ).catch(err => logger.error("Failed to send background email on update", err));
     }
 
+    // Bust invoice cache — invoice was updated
+    cache.bust(CACHE_KEYS.ALL_INVOICES);
+
     res.json({
       success: true,
       data: updatedInvoice,
@@ -184,6 +203,8 @@ router.delete("/:id", async (req, res, next) => {
       throw new AppError(HttpStatus.BAD_REQUEST, "Invalid invoice ID");
     }
     await InvoiceService.deleteInvoice(id);
+    // Bust invoice cache — invoice was deleted
+    cache.bust(CACHE_KEYS.ALL_INVOICES);
     res.status(HttpStatus.OK).json({ success: true, message: "Invoice deleted successfully" });
   } catch (error) {
     next(error);

@@ -27,6 +27,7 @@ export interface Invoice {
     items?: InvoiceItem[];
     tax_rate?: number;
     tax_amount?: number;
+    total_refunded?: number;
 }
 
 export interface InvoiceItemDTO {
@@ -133,31 +134,73 @@ export class InvoiceService {
     }
 
     /**
-     * Get all invoices
+     * Get all invoices — single JOIN query to avoid N+1 reads on Turso
      */
     static async getAllInvoices(): Promise<Invoice[]> {
         const db = getDatabase();
-        const invoices = await db.query<Invoice>(`
-            SELECT 
+
+        // Fetch invoices with total_refunded in one shot
+        const rows = await db.query<any>(`
+            SELECT
                 i.*,
-                (
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM transactions t
-                    WHERE t.invoice_id = i.id
-                    AND t.type = 'refund'
-                    AND t.status = 'approved'
-                ) as total_refunded
+                COALESCE(r.total_refunded, 0) AS total_refunded,
+                ii.id        AS item_id,
+                ii.name      AS item_name,
+                ii.description AS item_description,
+                ii.quantity  AS item_quantity,
+                ii.price     AS item_price
             FROM invoices i
-            ORDER BY i.created_at DESC
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) AS total_refunded
+                FROM transactions
+                WHERE type = 'refund' AND status = 'approved'
+                GROUP BY invoice_id
+            ) r ON r.invoice_id = i.id
+            LEFT JOIN invoice_items ii ON ii.invoice_id = i.id
+            ORDER BY i.created_at DESC, ii.id ASC
         `);
 
-        // Fetch items for each invoice (to ensure Edit works correctly)
-        for (const invoice of invoices) {
-            const items = await db.query<InvoiceItem>("SELECT * FROM invoice_items WHERE invoice_id = ?", [invoice.id]);
-            invoice.items = items;
+        // Group rows by invoice id (the JOIN fans out rows per item)
+        const invoiceMap = new Map<number, Invoice>();
+        for (const row of rows) {
+            if (!invoiceMap.has(row.id)) {
+                // Build the invoice record (strip item columns)
+                const invoice: Invoice = {
+                    id: row.id,
+                    invoice_number: row.invoice_number,
+                    customer_email: row.customer_email,
+                    customer_name: row.customer_name,
+                    customer_address: row.customer_address,
+                    amount: row.amount,
+                    processing_fee: row.processing_fee,
+                    currency: row.currency,
+                    status: row.status,
+                    description: row.description,
+                    authorizenet_transaction_id: row.authorizenet_transaction_id,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    tax_rate: row.tax_rate,
+                    tax_amount: row.tax_amount,
+                    total_refunded: row.total_refunded,
+                    items: [],
+                };
+                invoiceMap.set(row.id, invoice);
+            }
+
+            // Append line item if present
+            if (row.item_id != null) {
+                invoiceMap.get(row.id)!.items!.push({
+                    id: row.item_id,
+                    invoice_id: row.id,
+                    name: row.item_name,
+                    description: row.item_description,
+                    quantity: row.item_quantity,
+                    price: row.item_price,
+                });
+            }
         }
 
-        return invoices;
+        return Array.from(invoiceMap.values());
     }
 
     /**

@@ -1,16 +1,25 @@
 import { Router } from "express";
 import { logger } from "../utils/logger";
 import { getDatabase } from "../db/connection";
+import { cache, CACHE_KEYS, TTL } from "../utils/cache";
 
 const router = Router();
 
 // GET /api/transactions - List all transactions
 router.get("/", async (_req, res) => {
   try {
+    // Serve from cache if available
+    const cached = cache.get<any[]>(CACHE_KEYS.ALL_TRANSACTIONS);
+    if (cached) {
+      res.set("Cache-Control", "private, max-age=300");
+      res.set("X-Cache", "HIT");
+      return res.json({ success: true, data: cached, message: "Transactions retrieved successfully" });
+    }
+
     const db = getDatabase();
 
     const transactions = await db.query<any>(`
-      SELECT 
+      SELECT
         t.id,
         t.authorizenet_transaction_id,
         t.invoice_id,
@@ -21,17 +30,16 @@ router.get("/", async (_req, res) => {
         i.customer_name,
         i.customer_email,
         i.invoice_number,
-        i.invoice_number,
-        i.amount as invoice_amount,
-        (
-          SELECT COALESCE(SUM(amount), 0)
-          FROM transactions ref
-          WHERE ref.invoice_id = t.invoice_id
-            AND ref.type = 'refund'
-            AND ref.status = 'approved'
-        ) as total_refunded
+        i.amount          AS invoice_amount,
+        COALESCE(r.total_refunded, 0) AS total_refunded
       FROM transactions t
       LEFT JOIN invoices i ON t.invoice_id = i.id
+      LEFT JOIN (
+        SELECT invoice_id, SUM(amount) AS total_refunded
+        FROM transactions
+        WHERE type = 'refund' AND status = 'approved'
+        GROUP BY invoice_id
+      ) r ON r.invoice_id = t.invoice_id
       ORDER BY t.created_at DESC
     `);
 
@@ -57,14 +65,18 @@ router.get("/", async (_req, res) => {
       };
     });
 
-    res.json({
+    cache.set(CACHE_KEYS.ALL_TRANSACTIONS, formattedTransactions, TTL.TRANSACTIONS);
+
+    res.set("Cache-Control", "private, max-age=300");
+    res.set("X-Cache", "MISS");
+    return res.json({
       success: true,
       data: formattedTransactions,
       message: "Transactions retrieved successfully",
     });
   } catch (error) {
     logger.error("Error fetching transactions:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch transactions",
     });

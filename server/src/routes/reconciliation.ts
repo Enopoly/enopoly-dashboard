@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { AuthorizeNetService } from "../services/authorizenet";
 import { InvoiceService } from "../services/invoice";
 import { logger } from "../utils/logger";
+import { cache, CACHE_KEYS, TTL } from "../utils/cache";
 
 const router = Router();
 const authorizeNetService = new AuthorizeNetService();
@@ -18,6 +19,18 @@ router.get("/", async (req: Request, res: Response) => {
         // Default to last 30 days
         const end = endDate ? new Date(endDate as string) : new Date();
         const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+        // Check cache before hitting DB + AuthNet
+        const startStr = start.toISOString().split("T")[0];
+        const endStr = end.toISOString().split("T")[0];
+        const cacheKey = CACHE_KEYS.RECONCILIATION(startStr, endStr);
+
+        const cached = cache.get<any>(cacheKey);
+        if (cached) {
+          res.set("Cache-Control", "private, max-age=600");
+          res.set("X-Cache", "HIT");
+          return res.json(cached);
+        }
 
         logger.info(`Running reconciliation from ${start.toISOString()} to ${end.toISOString()}`);
 
@@ -123,7 +136,7 @@ router.get("/", async (req: Request, res: Response) => {
             .filter((txn: any) => txn.transactionStatus === 'settledSuccessfully')
             .reduce((sum: number, txn: any) => sum + txn.settleAmount, 0);
 
-        res.json({
+        const payload = {
             success: true,
             summary: {
                 totalMatched: matched.length,
@@ -138,10 +151,15 @@ router.get("/", async (req: Request, res: Response) => {
             orphanTransactions,
             startDate: start.toISOString(),
             endDate: end.toISOString()
-        });
+        };
+
+        cache.set(cacheKey, payload, TTL.RECONCILIATION);
+        res.set("Cache-Control", "private, max-age=600");
+        res.set("X-Cache", "MISS");
+        return res.json(payload);
     } catch (error) {
         logger.error("Failed to run reconciliation:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Failed to run reconciliation",
             error: (error as Error).message

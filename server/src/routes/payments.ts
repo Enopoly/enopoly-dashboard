@@ -3,6 +3,7 @@ import { logger } from "../utils/logger";
 import { AuthorizeNetService } from "../services/authorizenet";
 import { getDatabase } from "../db/connection";
 import { EmailService } from "../services/email";
+import { cache, CACHE_KEYS } from "../utils/cache";
 
 const router = Router();
 const paymentGateway = new AuthorizeNetService();
@@ -87,6 +88,10 @@ router.post("/charge", async (req, res) => {
       ]);
 
       logger.info(`Payment successful for invoice ${invoiceId}. Transaction ID: ${finalTransactionId}`);
+
+      // Bust caches — invoice status changed to paid, new transaction logged
+      cache.bust(CACHE_KEYS.ALL_INVOICES);
+      cache.bust(CACHE_KEYS.ALL_TRANSACTIONS);
 
       // Send Receipt Email (Async)
       if (invoice && invoice.customer_email) {
@@ -173,6 +178,11 @@ router.post("/refund/:id", async (req, res) => {
         }
       }
 
+      // Bust caches — refund logged, invoice may be marked refunded
+      cache.bust(CACHE_KEYS.ALL_INVOICES);
+      cache.bust(CACHE_KEYS.ALL_TRANSACTIONS);
+      cache.bust("reconciliation:*");
+
       res.json({
         success: true,
         data: result,
@@ -202,6 +212,9 @@ router.post("/void/:id", async (req, res) => {
     const result = await paymentGateway.void(transactionId);
 
     if (result.success) {
+      // Bust transaction cache after void
+      cache.bust(CACHE_KEYS.ALL_TRANSACTIONS);
+      cache.bust(CACHE_KEYS.ALL_INVOICES);
       res.json({
         success: true,
         data: result,
