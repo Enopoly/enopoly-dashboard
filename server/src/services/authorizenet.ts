@@ -335,7 +335,7 @@ export class AuthorizeNetService implements PaymentGateway {
         });
     }
 
-    async getTransactionHistory(startDate: Date, endDate: Date): Promise<any[]> {
+    private async _getBatchListChunk(startDate: Date, endDate: Date): Promise<any[]> {
         return new Promise((resolve, reject) => {
             const request = new APIContracts.GetSettledBatchListRequest();
             request.setMerchantAuthentication(this.merchantAuthenticationType);
@@ -421,13 +421,41 @@ export class AuthorizeNetService implements PaymentGateway {
                         });
                     });
                 } else {
-                    const errorMessage = response?.getMessages()?.getMessage()[0]?.getText() || "Failed to fetch transaction history";
+                    const errorMessage = response?.getMessages()?.getMessage()[0]?.getText() || "Failed to fetch transaction history chunk";
                     const errorCode = response?.getMessages()?.getMessage()[0]?.getCode();
                     console.error(`[AuthNet History Error] Code: ${errorCode}, Message: ${errorMessage}`);
-                    console.error(`[AuthNet History Error] Full Response:`, JSON.stringify(response, null, 2));
                     reject(new Error(`${errorCode}: ${errorMessage}`));
                 }
             });
         });
+    }
+
+    async getTransactionHistory(startDate: Date, endDate: Date): Promise<any[]> {
+        const chunks: {start: Date, end: Date}[] = [];
+        let current = new Date(startDate);
+        
+        while (current <= endDate) {
+            let chunkEnd = new Date(current);
+            chunkEnd.setDate(current.getDate() + 30); // Max 31 days inclusive
+            if (chunkEnd > endDate) {
+                chunkEnd = new Date(endDate);
+            }
+            chunks.push({ start: new Date(current), end: new Date(chunkEnd) });
+            
+            current = new Date(chunkEnd);
+            current.setDate(current.getDate() + 1); // Avoid overlap
+        }
+
+        try {
+            const allTransactions: any[] = [];
+            // Process chunks sequentially to avoid hitting Authorize.Net rate limits
+            for (const chunk of chunks) {
+                const chunkTransactions = await this._getBatchListChunk(chunk.start, chunk.end);
+                allTransactions.push(...chunkTransactions);
+            }
+            return allTransactions;
+        } catch (error) {
+            throw error;
+        }
     }
 }
